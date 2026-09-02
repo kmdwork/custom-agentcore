@@ -1,187 +1,104 @@
-# AgentCore Project
+# MyAgentCore
 
-This project was created with the [AgentCore CLI](https://github.com/aws/agentcore-cli).
+Amazon Bedrock AgentCore上で動作する、Strands Agentsベースのサンプルアプリケーションです。
 
-## Response mode
+LaravelアプリケーションからAgentCore Runtimeを呼び出し、会話、画像入力、Memory、Knowledge Base、Laravel内のデータ検索・登録を組み合わせる構成になっています。
 
-The current implementation streams responses as Server-Sent Events (SSE).
-The earlier working streaming implementation is also preserved in Git tag
-`poc-streaming-v1` (commit `803bb65`).
+## 主な機能
 
-## Project Structure
+- Strands Agentsによる応答生成
+- Server-Sent Events（SSE）によるストリーミング応答
+- AgentCore Memoryを利用したユーザーごとの会話記憶
+- Amazon Bedrock Knowledge Baseの検索
+- AgentCore Browserを利用したWeb閲覧
+- Laravelに登録された顧客情報の検索
+- Laravelに登録されたエアコン情報の検索
+- Laravelへのエアコン情報登録
+- Laravel Sanctumトークンを利用したTool API認証
 
-```
-my-project/
-├── AGENTS.md               # AI coding assistant context
+## 構成
+
+```text
+myagentcore-public/
 ├── agentcore/
-│   ├── agentcore.json      # Project config (agents, memories, credentials, gateways, evaluators)
-│   ├── aws-targets.json    # Deployment targets (account + region)
-│   ├── .env.local          # Secrets — API keys (gitignored)
-│   ├── .llm-context/       # TypeScript type definitions for AI assistants
-│   │   ├── agentcore.ts    # AgentCoreProjectSpec types
-│   │   ├── aws-targets.ts  # Deployment target types
-│   │   └── mcp.ts          # Gateway and MCP tool types
-│   └── cdk/                # CDK infrastructure (@aws/agentcore-cdk)
-├── app/                    # Agent application code
-└── evaluators/             # Custom evaluator code (if any)
+│   ├── agentcore.json          # Runtime、Memory、Knowledge Base、Gateway設定
+│   ├── aws-targets.json        # AWSアカウントとリージョン設定
+│   ├── schemas/                # APIスキーマ
+│   └── cdk/                    # AgentCore CLIが利用するCDKコード
+└── app/MyAgent/
+    ├── main.py                 # AgentCore Runtimeのエントリーポイント
+    ├── agent/                  # Agent生成、プロンプト、Tool登録
+    ├── browser_tools/          # AgentCore Browser関連処理
+    ├── invocation/             # リクエスト検証とストリーミング処理
+    ├── laravel_tools/          # Laravel APIを呼び出すTool
+    ├── memory/                 # AgentCore Memory設定
+    ├── mcp_client/             # Knowledge Base Gateway接続
+    ├── model/                  # モデル設定
+    └── tests/                  # ユニットテスト
 ```
 
-## Getting Started
+## Laravel Tool
 
-### Prerequisites
+Agentから利用できるLaravel Toolは次の3つです。
 
-- **Node.js** 20.x or later
-- **Python 3.10+** and **uv** for Python agents ([install uv](https://docs.astral.sh/uv/getting-started/installation/))
-- **AWS credentials** configured (`aws configure` or environment variables)
-- **Docker** (only for Container build agents)
+| Tool | 処理 |
+| --- | --- |
+| `search_customers` | 顧客情報を検索する |
+| `search_airconditioner` | エアコン情報を検索する |
+| `register_airconditioner` | エアコン情報を登録する |
 
-### Development
+認証情報はモデルの引数には含めず、Laravelから渡された認証済み情報をStrandsの`ToolContext`から取得します。
 
-Run your agent locally:
+## 公開用設定
+
+このリポジトリの設定値は公開用のサンプルです。デプロイ前に次の値を実際の環境へ置き換えてください。
+
+```text
+https://laravel.example.com/api/agent-tools
+s3://example-agentcore-knowledge-base
+AWSアカウントID: <AWS_ACCOUNT_ID>
+```
+
+秘密情報は`.env.local`などのGit管理外ファイルで管理してください。Laravelとの通信にはHTTPSを使用し、SanctumトークンやAWS Credentialを`agentcore.json`へ直接記載しないでください。
+
+## 開発準備
+
+Python 3.10以上、`uv`、AgentCore CLI、AWS Credentialが必要です。Python依存関係は次のコマンドで用意します。
 
 ```bash
-agentcore dev
+cd app/MyAgent
+uv sync
+cd ../..
 ```
 
-### Deployment
+## 動作確認
 
-Run the following commands from this project directory (`app/`) after changing
-the agent source code or `agentcore/agentcore.json`.
-
-1. Run the MyAgent unit tests:
+プロジェクトのルートで実行します。
 
 ```bash
 app/MyAgent/.venv/bin/python -m unittest discover -s app/MyAgent/tests -v
-```
-
-2. Validate the AgentCore project configuration:
-
-```bash
 agentcore validate
 ```
 
-3. Preview the deployment before changing AWS resources. `--dry-run` checks
-   what would be deployed, and `--diff` shows the CDK resource differences:
+## デプロイ
+
+設定差分を確認してからデプロイします。
 
 ```bash
 agentcore deploy --dry-run
 agentcore deploy --diff
-```
-
-Review the diff carefully when `agentcore/agentcore.json` contains resource
-renames or removals. A resource name is its deployment identity, so renaming one
-can replace the existing AWS resource.
-
-4. Deploy the application and infrastructure:
-
-```bash
 agentcore deploy
 ```
 
-For a non-interactive deployment after reviewing the diff, use:
-
-```bash
-agentcore deploy --yes
-```
-
-5. Confirm that the `MyAgent` Runtime and its connected resources are deployed:
+デプロイ後はRuntimeの状態を確認できます。
 
 ```bash
 agentcore status --runtime MyAgent
 ```
 
-6. Perform a basic invocation against the deployed Runtime:
+## 注意事項
 
-```bash
-agentcore invoke --runtime MyAgent --stream "こんにちは"
-```
-
-This CLI invocation is a no-memory smoke test and does not reproduce the
-Laravel Sanctum authentication flow. After it succeeds, verify the complete
-text, image, customer-search, and memory flows from the Laravel application.
-
-If only Python files under `app/MyAgent/` changed, the same workflow still
-applies: the CodeZip package must be rebuilt and deployed for the Runtime to use
-the new code. Do not edit generated files under `agentcore/cdk/`; make
-infrastructure changes in `agentcore/agentcore.json` and deploy them through the
-AgentCore CLI.
-
-## Commands
-
-| Command | Description |
-| --- | --- |
-| `agentcore create` | Create a new AgentCore project |
-| `agentcore add` | Add resources (agent, memory, credential, gateway, evaluator, policy) |
-| `agentcore remove` | Remove resources |
-| `agentcore dev` | Run agent locally with hot-reload |
-| `agentcore deploy` | Deploy to AWS via CDK |
-| `agentcore status` | Show deployment status |
-| `agentcore invoke` | Invoke agent (local or deployed) |
-| `agentcore logs` | View agent logs |
-| `agentcore traces` | View agent traces |
-| `agentcore eval` | Run evaluations |
-| `agentcore package` | Package agent artifacts |
-| `agentcore validate` | Validate configuration |
-| `agentcore pause` | Pause a deployed agent |
-| `agentcore resume` | Resume a paused agent |
-| `agentcore fetch` | Fetch remote resource definitions |
-| `agentcore import` | Import existing resources |
-| `agentcore update` | Check for CLI updates |
-
-## Configuration
-
-Edit the JSON files in `agentcore/` to configure your project. See `agentcore/.llm-context/` for type definitions and validation constraints.
-
-The project uses a **flat resource model** — agents, memories, credentials, gateways, evaluators, and policies are top-level arrays in `agentcore.json`. Resources are independent; agents discover memories and credentials at runtime via environment variables or SDK calls.
-
-## Authentication migration note
-
-The working Laravel implementation that uses standard web session authentication
-is preserved in the Laravel repository under the Git tag `poc-session-auth-v1`.
-Use that tag as the reference point when reviewing or restoring the application
-before its migration to Sanctum token authentication.
-
-## Resources
-
-| Resource | Purpose |
-| --- | --- |
-| Agent (runtime) | HTTP, MCP, or A2A agent deployed to AgentCore Runtime |
-| Memory | Persistent context storage with configurable strategies |
-| Credential | API key or OAuth credential providers |
-| Gateway | MCP gateway that routes tool calls to targets |
-| Gateway Target | Tool implementation (Lambda, MCP server, OpenAPI, Smithy, API Gateway) |
-| Evaluator | Custom LLM-as-a-Judge or code-based evaluation |
-| Online Eval Config | Continuous evaluation pipeline for deployed agents |
-| Policy | Cedar authorization policies for gateway tools |
-
-### Agent Types
-
-- **Template agents**: Created from framework templates (Strands, LangChain/LangGraph, GoogleADK, OpenAI Agents, Autogen)
-- **BYO agents**: Bring your own code with `agentcore add agent --type byo`
-- **Import agents**: Import existing Bedrock agents with `agentcore import`
-
-### Build Types
-
-- **CodeZip**: Python source packaged as a zip and deployed directly to AgentCore Runtime
-- **Container**: Docker image built via CodeBuild (ARM64), pushed to ECR, and deployed to AgentCore Runtime
-
-## Documentation
-
-- [AgentCore CLI](https://github.com/aws/agentcore-cli)
-- [AgentCore CDK Constructs](https://github.com/aws/agentcore-l3-cdk-constructs)
-- [Amazon Bedrock AgentCore](https://aws.amazon.com/bedrock/agentcore/)
-
-
-## Public repository configuration
-
-The values committed to `agentcore/agentcore.json` and
-`agentcore/aws-targets.json` are public examples. Before deployment, replace
-the following values locally with the actual environment settings:
-
-- `https://laravel.example.com/api/agent-tools`
-- `s3://example-agentcore-knowledge-base`
-- AWS account ID `<AWS_ACCOUNT_ID>`
-
-Do not commit `.env.local`, AgentCore CLI state, deployment logs, traces, or
-generated CDK assets. The Laravel tools authenticate with short-lived Sanctum
-Bearer tokens; do not place tokens or credentials in `agentcore.json`.
+- `agentcore/agentcore.json`を構成の正本として扱います。
+- `agentcore/cdk/`の生成コードは直接編集しません。
+- Resourceの`name`を変更すると、AWSリソースが再作成される場合があります。
+- `.env.local`、CLI状態、ログ、トレース、仮想環境、生成物はGitへ登録しません。
