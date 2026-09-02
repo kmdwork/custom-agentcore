@@ -1,51 +1,67 @@
 # MyAgentCore
 
-Amazon Bedrock AgentCore上でStrands Agentを動かすためのプロジェクトです。
+Amazon Bedrock AgentCore Harnessを利用する、宣言的なAIエージェントプロジェクトです。
 
-現在のv1.0は、AgentCore CLIの`agentcore create`で作成した初期構成です。Laravel連携、Knowledge Base、永続Memoryなどはまだ実装していません。
+現在のv1.01では、PythonのAgentコードを配置せず、`harness.json`とシステムプロンプトからAgentの構成を定義しています。
 
-## 現在の機能
+## 現在の構成
 
-- Amazon Bedrock AgentCore Runtimeの基本構成
-- Strands Agentsによる応答生成
-- Amazon Bedrock上のClaudeモデルの利用
-- Server-Sent Events（SSE）による応答ストリーミング
-- サンプルTool `add_numbers`
-- Streamable HTTP MCPクライアント
-- `session_id`ごとのプロセス内会話保持
-
-会話履歴はプロセス内だけに保持されるため、再起動やコールドスタートで失われます。
+- Harness名: `MyHarness`
+- モデルプロバイダー: Amazon Bedrock
+- モデル: Claude Haiku 4.5
+- Tool: 未設定
+- Skill: 未設定
+- Memory: 無効
+- システムプロンプト: 汎用アシスタント
 
 ## ディレクトリ構成
 
 ```text
 myagentcore-public/
 ├── agentcore/
-│   ├── agentcore.json       # RuntimeなどのAgentCore設定
+│   ├── agentcore.json       # Harnessを含むAgentCore全体の設定
 │   ├── aws-targets.json     # デプロイ先AWS環境の設定
 │   └── cdk/                 # AgentCore CLIが生成したCDKコード
-├── app/MyAgent/
-│   ├── main.py              # Runtimeのエントリーポイント
-│   ├── model/               # Bedrockモデルの生成処理
-│   ├── mcp_client/          # MCPクライアント設定
-│   ├── pyproject.toml       # Pythonプロジェクト設定
-│   └── uv.lock              # 依存関係のロックファイル
+├── app/MyHarness/
+│   ├── harness.json         # モデル、Tool、Skill、Memoryの設定
+│   └── system-prompt.md     # Harnessへ渡すシステムプロンプト
 └── VERSIONS.md              # バージョンごとの概要
 ```
 
-## ローカルでの実行
+## 設定ファイル
+
+`app/MyHarness/harness.json`がHarnessの基本設定です。
+
+```json
+{
+  "name": "MyHarness",
+  "model": {
+    "provider": "bedrock",
+    "modelId": "global.anthropic.claude-haiku-4-5-20251001-v1:0"
+  },
+  "tools": [],
+  "skills": [],
+  "memory": {
+    "mode": "disabled"
+  }
+}
+```
+
+## 検証とローカル実行
+
+プロジェクトのルートで実行します。
 
 ```bash
-cd app/MyAgent
-uv sync
-cd ../..
+agentcore validate
 agentcore dev
 ```
 
-別のターミナルから呼び出します。
+別のターミナルからHarnessを呼び出します。
 
 ```bash
-agentcore invoke --dev "こんにちは"
+agentcore invoke --harness MyHarness \
+  --session-id "$(uuidgen)" \
+  "こんにちは"
 ```
 
 ## デプロイ
@@ -53,18 +69,18 @@ agentcore invoke --dev "こんにちは"
 AWS Credentialとデプロイ先を設定したうえで実行します。
 
 ```bash
-agentcore validate
 agentcore deploy --dry-run
 agentcore deploy
+agentcore status
 ```
 
-現在の`aws-targets.json`にはデプロイ先が登録されていないため、実際にデプロイする前にAWS環境の設定が必要です。
+公開リポジトリの`aws-targets.json`ではAWSアカウントIDを`<AWS_ACCOUNT_ID>`に置き換えています。実際にデプロイするときは、ローカル環境で対象アカウントの値を設定してください。
 
 ## 公開時の注意
 
-- `.env.local`、AWS Credential、トークンなどの秘密情報はGitへ登録しません。
-- `.venv`、`node_modules`、CDK生成物、AgentCore CLIの状態ファイルはGit管理外です。
-- `agentcore/cdk/`はCLIによる生成コードのため、原則として直接編集しません。
-- 外部MCPエンドポイントを利用する場合は、送信する情報と提供元の利用条件を確認してください。
+- `.env.local`、AWS Credential、APIキー、トークンはGitへ登録しません。
+- `.cli`、`cdk.out`、`node_modules`などの生成物はGit管理外です。
+- `agentcore/cdk/`はAgentCore CLIによる生成コードのため、原則として直接編集しません。
+- Tool、Skill、Memoryを追加した場合は、外部サービスへ送信する情報と権限設定を確認します。
 
-今後の変更内容は[VERSIONS.md](VERSIONS.md)へ記録します。
+変更履歴は[VERSIONS.md](VERSIONS.md)に記録しています。

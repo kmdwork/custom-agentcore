@@ -7,17 +7,7 @@
     "agentcore:created-by": "agentcore-cli",
     "agentcore:project-name": "sandbox"
   },
-  "runtimes": [
-    {
-      "name": "MyAgent",
-      "build": "CodeZip",
-      "entrypoint": "main.py",
-      "codeLocation": "app/MyAgent/",
-      "runtimeVersion": "PYTHON_3_14",
-      "networkMode": "PUBLIC",
-      "protocol": "HTTP"
-    }
-  ],
+  "runtimes": [],
   "memories": [],
   "knowledgeBases": [],
   "credentials": [],
@@ -27,7 +17,12 @@
   "policyEngines": [],
   "configBundles": [],
   "abTests": [],
-  "harnesses": [],
+  "harnesses": [
+    {
+      "name": "MyHarness",
+      "path": "app/MyHarness"
+    }
+  ],
   "datasets": [],
   "payments": []
 }
