@@ -1,0 +1,34 @@
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# AgentCore local state and generated artifacts
+agentcore/.env.local
+agentcore/.cli/
+agentcore/.cache/
+agentcore/cdk/cdk.out/
+agentcore/cdk/dist/
+agentcore/cdk/node_modules/
+
+# Python environments and caches
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+
+# Logs and local notes
+*.log
+/LOG.md
+
+# IDE and OS files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -1,0 +1,8 @@
+[
+  {
+    "name": "default",
+    "description": "Public example target (ap-northeast-1)",
+    "account": "<AWS_ACCOUNT_ID>",
+    "region": "ap-northeast-1"
+  }
+]

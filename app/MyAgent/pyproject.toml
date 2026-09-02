@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "MyAgent"
+version = "0.1.0"
+description = "AgentCore Runtime Application using Strands SDK"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "aws-opentelemetry-distro",
+    "bedrock-agentcore >= 1.9.1",
+    "botocore[crt] >= 1.35.0",
+    "mcp >= 1.19.0",
+    "mcp-proxy-for-aws>=1.6.4",
+    "strands-agents >= 1.15.0",
+    "strands-agents-tools[agent-core-browser]",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
+[tool.uv]
+override-dependencies = [
+    "bedrock-agentcore>=1.9.1",
+]
+
+[tool.uv.sources]
+strands-agents-tools = { git = "https://github.com/strands-agents/tools.git", rev = "60b63901e5640f0176a8eb25352ac730765fd8ce" }
