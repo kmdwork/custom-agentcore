@@ -1,5 +1,9 @@
 # バージョン履歴
 
+## v1.02
+
+HarnessにAgentCore Browser、Gateway経由のKnowledge Base検索、managed Memoryを追加。公開用設定ではAWSアカウントID、S3 URI、Gateway ARNをサンプル値へ置換。
+
 ## v1.01
 
 Pythonで作成したAgent構成から、`harness.json`とシステムプロンプトで定義するAgentCore Harness構成へ変更。Claude Haiku 4.5を使用し、Tool、Skill、Memoryは未設定の最小構成。

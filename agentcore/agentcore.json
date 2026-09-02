@@ -9,11 +9,69 @@
   },
   "runtimes": [],
   "memories": [],
-  "knowledgeBases": [],
+  "knowledgeBases": [
+    {
+      "type": "AgentCoreKnowledgeBase",
+      "name": "MyKnowledgeBase",
+      "description": "Knowledge base for documents used by the Strands application",
+      "dataSources": [
+        {
+          "type": "S3",
+          "uri": "s3://example-agentcore-knowledge-base"
+        }
+      ]
+    }
+  ],
   "credentials": [],
   "evaluators": [],
   "onlineEvalConfigs": [],
-  "agentCoreGateways": [],
+  "agentCoreGateways": [
+    {
+      "name": "strands-app-tools",
+      "protocolType": "None",
+      "description": "Gateway for strands-app-tools",
+      "targets": [
+        {
+          "name": "MyKnowledgeBase",
+          "targetType": "connector",
+          "connectorId": "bedrock-knowledge-bases",
+          "configurations": [
+            {
+              "name": "AgenticRetrieveStream",
+              "description": "Streaming endpoint for agentic retrieval from knowledge bases. Performs multi-step retrieval with planning and returns results as a stream of events.",
+              "parameterValues": {
+                "retrievers": [
+                  {
+                    "configuration": {
+                      "knowledgeBase": {
+                        "knowledgeBaseId": "MyKnowledgeBase"
+                      }
+                    }
+                  }
+                ],
+                "agenticRetrieveConfiguration": {
+                  "foundationModelType": "MANAGED",
+                  "rerankingModelType": "MANAGED"
+                }
+              },
+              "parameterOverrides": []
+            },
+            {
+              "name": "Retrieve",
+              "description": "Queries a knowledge base and retrieves information from it.",
+              "parameterValues": {
+                "knowledgeBaseId": "MyKnowledgeBase"
+              },
+              "parameterOverrides": []
+            }
+          ]
+        }
+      ],
+      "authorizerType": "NONE",
+      "enableSemanticSearch": true,
+      "exceptionLevel": "NONE"
+    }
+  ],
   "policyEngines": [],
   "configBundles": [],
   "abTests": [],
