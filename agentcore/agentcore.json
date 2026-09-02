@@ -1,11 +1,11 @@
 {
   "$schema": "https://schema.agentcore.aws.dev/v1/agentcore.json",
-  "name": "app",
+  "name": "sandbox",
   "version": 1,
   "managedBy": "CDK",
   "tags": {
     "agentcore:created-by": "agentcore-cli",
-    "agentcore:project-name": "app"
+    "agentcore:project-name": "sandbox"
   },
   "runtimes": [
     {
@@ -13,102 +13,17 @@
       "build": "CodeZip",
       "entrypoint": "main.py",
       "codeLocation": "app/MyAgent/",
-      "runtimeVersion": "PYTHON_3_13",
+      "runtimeVersion": "PYTHON_3_14",
       "networkMode": "PUBLIC",
-      "protocol": "HTTP",
-      "envVars": [
-        {
-          "name": "LARAVEL_AGENT_TOOLS_URL",
-          "value": "https://laravel.example.com/api/agent-tools"
-        }
-      ],
-      "connections": [
-        {
-          "id": "managedBrowser",
-          "to": {
-            "type": "browser"
-          }
-        }
-      ]
+      "protocol": "HTTP"
     }
   ],
-  "memories": [
-    {
-      "name": "MyAgentMemory",
-      "eventExpiryDuration": 30,
-      "strategies": [
-        {
-          "type": "SEMANTIC",
-          "namespaceTemplates": [
-            "/users/{actorId}/facts"
-          ]
-        }
-      ]
-    }
-  ],
-  "knowledgeBases": [
-    {
-      "type": "AgentCoreKnowledgeBase",
-      "name": "agentcore-strands-app-knowledge",
-      "description": "Knowledge base for documents used by the Strands application",
-      "dataSources": [
-        {
-          "type": "S3",
-          "uri": "s3://example-agentcore-knowledge-base"
-        }
-      ]
-    }
-  ],
+  "memories": [],
+  "knowledgeBases": [],
   "credentials": [],
   "evaluators": [],
   "onlineEvalConfigs": [],
-  "agentCoreGateways": [
-    {
-      "name": "strands-app-tools",
-      "protocolType": "None",
-      "description": "Gateway for strands-app-tools",
-      "targets": [
-        {
-          "name": "agentcore-strands-app-knowledge",
-          "targetType": "connector",
-          "connectorId": "bedrock-knowledge-bases",
-          "configurations": [
-            {
-              "name": "AgenticRetrieveStream",
-              "description": "Streaming endpoint for agentic retrieval from knowledge bases. Performs multi-step retrieval with planning and returns results as a stream of events.",
-              "parameterValues": {
-                "retrievers": [
-                  {
-                    "configuration": {
-                      "knowledgeBase": {
-                        "knowledgeBaseId": "agentcore-strands-app-knowledge"
-                      }
-                    }
-                  }
-                ],
-                "agenticRetrieveConfiguration": {
-                  "foundationModelType": "MANAGED",
-                  "rerankingModelType": "MANAGED"
-                }
-              },
-              "parameterOverrides": []
-            },
-            {
-              "name": "Retrieve",
-              "description": "Queries a knowledge base and retrieves information from it.",
-              "parameterValues": {
-                "knowledgeBaseId": "agentcore-strands-app-knowledge"
-              },
-              "parameterOverrides": []
-            }
-          ]
-        }
-      ],
-      "authorizerType": "AWS_IAM",
-      "enableSemanticSearch": true,
-      "exceptionLevel": "NONE"
-    }
-  ],
+  "agentCoreGateways": [],
   "policyEngines": [],
   "configBundles": [],
   "abTests": [],
