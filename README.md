@@ -1,8 +1,8 @@
 # MyAgentCore
 
-Amazon Bedrock AgentCore Harnessを利用する、宣言的なAIエージェントプロジェクトです。
+Amazon Bedrock AgentCore Harnessを利用する、宣言的なAIエージェントプロジェクトです。HarnessからRuntimeへ移行するための、未編集のエクスポート結果も保存しています。
 
-現在のv1.02では、PythonのAgentコードを配置せず、Harnessの設定ファイルからBrowser、Knowledge Base、Memoryを利用できる構成にしています。
+現在のv1.1では、v1.02のHarness構成をそのまま残し、`agentcore export harness`が生成したCodeZip Runtimeを比較・検証用のスナップショットとして追加しています。
 
 ## 現在の構成
 
@@ -14,6 +14,7 @@ Amazon Bedrock AgentCore Harnessを利用する、宣言的なAIエージェン�
 - Memory: managed Memoryを利用
 - Skill: 未設定
 - システムプロンプト: 汎用アシスタント
+- Runtime: `MyHarnessAgent`（Harnessから未編集のままエクスポート）
 
 ## ディレクトリ構成
 
@@ -26,6 +27,7 @@ myagentcore-public/
 ├── app/MyHarness/
 │   ├── harness.json         # モデル、Tool、Skill、Memoryの設定
 │   └── system-prompt.md     # Harnessへ渡すシステムプロンプト
+├── app/MyHarnessAgent/      # Harnessから生成された未編集のStrands Runtime
 └── VERSIONS.md              # バージョンごとの概要
 ```
 
@@ -51,6 +53,27 @@ myagentcore-public/
 - **回答やTool実行は確定的ではない**: モデルの回答、Knowledge Baseの検索結果、BrowserやGatewayの実行は、モデル、権限、接続先、データの状態に依存します。重要な判断に利用する場合は、呼び出し側で検証やエラー処理を行います。
 
 そのため、ブラウザからHarnessを直接呼び出すのではなく、認証、認可、入力検証、IDの割り当てを行うバックエンドを経由させます。
+
+## Runtimeエクスポートのスナップショット
+
+この構成はv1.1で追加しました。
+
+次のコマンドで、Harnessを`MyHarnessAgent`というStrands Python Runtimeへエクスポートしました。
+
+```bash
+agentcore export harness --name MyHarness
+```
+
+`app/MyHarnessAgent/`は、エクスポート直後からコードを編集していない比較・検証用のスナップショットです。`agentcore/agentcore.json`には、CodeZip、Python 3.14、HTTPプロトコルのRuntime登録が追加されています。元の`MyHarness`も残しているため、HarnessとRuntimeを比較できます。
+
+このCodeZipエクスポートには、次の未対応事項があります。
+
+- AgentCore BrowserはPlaywrightのNode.jsドライバーを必要とするため除外されています。Browserを含めるには、`--build Container`を指定して再エクスポートする必要があります。
+- Harnessのmanaged Memoryは、生成コード上では永続Memoryとして移行されていません。会話状態はプロセス内の最大128セッションのキャッシュであり、コールドスタートなどで失われます。
+- Gatewayクライアントは`AGENTCORE_GATEWAY_STRANDS_APP_TOOLS_URL`環境変数を参照しますが、この公開スナップショットには実際のURLを含めていません。
+- 生成コードにはShellとファイル操作Toolが含まれます。そのまま公開運用せず、必要性、権限、入力経路、プロンプトインジェクション対策を確認する必要があります。
+
+AgentCore CLIが出力した個別の注意事項は、`app/MyHarnessAgent/EXPORT_NOTES.md`を参照してください。このスナップショットは未デプロイ・未検証であり、そのまま本番利用することを目的としていません。
 
 ## Knowledge Base
 
