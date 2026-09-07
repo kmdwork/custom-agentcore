@@ -86,7 +86,7 @@ managed Memoryの初回作成には時間がかかる場合があります。
 ```text
 AWSアカウントID: <AWS_ACCOUNT_ID>
 S3 URI: s3://example-agentcore-knowledge-base
-Gateway ARN: <AWS_ARN>
+Gateway ARN: <AGENTCORE_GATEWAY_ARN>
 ```
 
 このままでは実環境へデプロイできません。ローカルで実際のAWSアカウントID、S3 URI、デプロイ済みGateway ARNを設定してください。

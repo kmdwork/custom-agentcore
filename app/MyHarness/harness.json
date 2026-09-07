@@ -14,7 +14,7 @@
       "name": "strands-app-tools",
       "config": {
         "agentCoreGateway": {
-          "gatewayArn": "<AWS_ARN>"
+          "gatewayArn": "<AGENTCORE_GATEWAY_ARN>"
         }
       }
     }
