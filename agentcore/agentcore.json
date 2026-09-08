@@ -1,96 +1,67 @@
 {
   "$schema": "https://schema.agentcore.aws.dev/v1/agentcore.json",
-  "name": "sandbox",
+  "name": "myruntime",
   "version": 1,
   "managedBy": "CDK",
   "tags": {
     "agentcore:created-by": "agentcore-cli",
-    "agentcore:project-name": "sandbox"
+    "agentcore:project-name": "myruntime"
   },
   "runtimes": [
     {
-      "name": "MyHarnessAgent",
+      "name": "MyAgent",
       "build": "CodeZip",
       "entrypoint": "main.py",
-      "codeLocation": "app/MyHarnessAgent/",
+      "codeLocation": "app/MyAgent/",
       "runtimeVersion": "PYTHON_3_14",
       "networkMode": "PUBLIC",
       "protocol": "HTTP"
     }
   ],
-  "memories": [],
-  "knowledgeBases": [
+  "memories": [
     {
-      "type": "AgentCoreKnowledgeBase",
-      "name": "MyKnowledgeBase",
-      "description": "Knowledge base for documents used by the Strands application",
-      "dataSources": [
+      "name": "MyAgentMemory",
+      "eventExpiryDuration": 30,
+      "strategies": [
         {
-          "type": "S3",
-          "uri": "s3://example-agentcore-knowledge-base"
+          "type": "SEMANTIC",
+          "namespaceTemplates": [
+            "/users/{actorId}/facts"
+          ]
+        },
+        {
+          "type": "USER_PREFERENCE",
+          "namespaceTemplates": [
+            "/users/{actorId}/preferences"
+          ]
+        },
+        {
+          "type": "SUMMARIZATION",
+          "namespaceTemplates": [
+            "/summaries/{actorId}/{sessionId}"
+          ]
+        },
+        {
+          "type": "EPISODIC",
+          "namespaceTemplates": [
+            "/episodes/{actorId}/{sessionId}"
+          ],
+          "reflectionNamespaceTemplates": [
+            "/episodes/{actorId}"
+          ]
         }
       ]
     }
   ],
+  "knowledgeBases": [],
   "credentials": [],
   "evaluators": [],
   "onlineEvalConfigs": [],
-  "agentCoreGateways": [
-    {
-      "name": "strands-app-tools",
-      "protocolType": "None",
-      "description": "Gateway for strands-app-tools",
-      "targets": [
-        {
-          "name": "MyKnowledgeBase",
-          "targetType": "connector",
-          "connectorId": "bedrock-knowledge-bases",
-          "configurations": [
-            {
-              "name": "AgenticRetrieveStream",
-              "description": "Streaming endpoint for agentic retrieval from knowledge bases. Performs multi-step retrieval with planning and returns results as a stream of events.",
-              "parameterValues": {
-                "retrievers": [
-                  {
-                    "configuration": {
-                      "knowledgeBase": {
-                        "knowledgeBaseId": "MyKnowledgeBase"
-                      }
-                    }
-                  }
-                ],
-                "agenticRetrieveConfiguration": {
-                  "foundationModelType": "MANAGED",
-                  "rerankingModelType": "MANAGED"
-                }
-              },
-              "parameterOverrides": []
-            },
-            {
-              "name": "Retrieve",
-              "description": "Queries a knowledge base and retrieves information from it.",
-              "parameterValues": {
-                "knowledgeBaseId": "MyKnowledgeBase"
-              },
-              "parameterOverrides": []
-            }
-          ]
-        }
-      ],
-      "authorizerType": "NONE",
-      "enableSemanticSearch": true,
-      "exceptionLevel": "NONE"
-    }
-  ],
+  "agentCoreGateways": [],
   "policyEngines": [],
   "configBundles": [],
   "abTests": [],
-  "harnesses": [
-    {
-      "name": "MyHarness",
-      "path": "app/MyHarness"
-    }
-  ],
+  "harnesses": [],
   "datasets": [],
   "payments": []
 }

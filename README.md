@@ -1,90 +1,67 @@
 # MyAgentCore
 
-Amazon Bedrock AgentCore Harnessを利用する、宣言的なAIエージェントプロジェクトです。HarnessからRuntimeへ移行するための、未編集のエクスポート結果も保存しています。
+Amazon Bedrock AgentCore Runtimeを利用する、Strands Pythonエージェントのサンプルプロジェクトです。
 
-現在のv1.1では、v1.02のHarness構成をそのまま残し、`agentcore export harness`が生成したCodeZip Runtimeを比較・検証用のスナップショットとして追加しています。
+v2.0では、以前のHarness構成やHarnessからのエクスポート結果を引き継がず、AgentCore CLIでRuntimeを一から新規作成しました。`app/MyAgent/`は、生成後にエージェントコードを変更していない初期状態です。
 
-## 現在の構成
+## v2.0の構成
 
-- Harness名: `MyHarness`
-- モデルプロバイダー: Amazon Bedrock
-- モデル: Claude Haiku 4.5
-- Browser: AgentCore BrowserをToolとして利用
-- Knowledge Base: AgentCore Gateway経由で検索
-- Memory: managed Memoryを利用
-- Skill: 未設定
-- システムプロンプト: 汎用アシスタント
-- Runtime: `MyHarnessAgent`（Harnessから未編集のままエクスポート）
+- プロジェクト名: `myruntime`
+- Runtime名: `MyAgent`
+- エージェントフレームワーク: Strands Agents
+- モデル: Amazon BedrockのClaude Sonnet 4.5
+- ビルド方式: CodeZip
+- Runtime: Python 3.14
+- プロトコル: HTTP
+- ネットワークモード: PUBLIC
+- Memory: `MyAgentMemory`
+- サンプルTool: `add_numbers`
+- MCP: 認証不要のExa MCPサンプル
+- Harness、Knowledge Base、AgentCore Gateway: 未設定
 
 ## ディレクトリ構成
 
 ```text
 myagentcore-public/
 ├── agentcore/
-│   ├── agentcore.json       # Knowledge Base、Gateway、Harnessの登録
-│   ├── aws-targets.json     # デプロイ先AWS環境の設定
+│   ├── agentcore.json       # RuntimeとMemoryの宣言
+│   ├── aws-targets.json     # デプロイ先AWS環境
 │   └── cdk/                 # AgentCore CLIが生成したCDKコード
-├── app/MyHarness/
-│   ├── harness.json         # モデル、Tool、Skill、Memoryの設定
-│   └── system-prompt.md     # Harnessへ渡すシステムプロンプト
-├── app/MyHarnessAgent/      # Harnessから生成された未編集のStrands Runtime
-└── VERSIONS.md              # バージョンごとの概要
+├── app/MyAgent/
+│   ├── main.py              # AgentCore Runtimeのエントリーポイント
+│   ├── model/               # Bedrockモデルの設定
+│   ├── memory/              # AgentCore Memoryとの連携
+│   ├── mcp_client/          # Streamable HTTP MCPクライアント
+│   ├── skills/              # Skill取得用コード
+│   ├── pyproject.toml       # Pythonプロジェクト設定
+│   └── uv.lock              # 依存関係のロックファイル
+└── VERSIONS.md              # バージョン履歴
 ```
 
-## Harness
+## Runtime
 
-`app/MyHarness/harness.json`では、次のToolとMemoryを有効にしています。
+`app/MyAgent/main.py`では、`BedrockAgentCoreApp`の`@app.entrypoint`を使用してStrands Agentを公開します。
 
-- `browser`: Webサイトの閲覧に使用するAgentCore Browser
-- `strands-app-tools`: Knowledge Baseへ接続するAgentCore Gateway
-- `managed` Memory: Harness専用のAgentCore Memoryをデプロイ時に作成
+入力は、文字列の`prompt`、Harness互換の`messages`、または`tool_results`を受け付け、結果をストリーミングで返します。初期Toolとして、2つの数値を加算する`add_numbers`が登録されています。
 
-同じ会話を継続するときは、呼び出し側で同じ`session_id`を使用します。
+モデルは`app/MyAgent/model/load.py`でClaude Sonnet 4.5を指定しています。
 
-### Harnessの制約と注意点
+## Memory
 
-このリポジトリで使用している宣言的Harnessには、次の制約があります。
+`MyAgentMemory`はイベントを30日間保持し、次の4種類のMemory Strategyを設定しています。
 
-- **画像入力には未対応**: 現在の`InvokeHarness`のメッセージ入力には画像用のContent Blockがなく、この構成でも画像受信を確認できませんでした。画像を扱う場合は、画像入力に対応する独自のAgentCore Runtimeなど、別の構成を検討する必要があります。
-- **任意のアプリケーション処理は追加できない**: `harness.json`ではモデル、Tool、Skill、Memoryなどを宣言できますが、ログイン状態の検証、独自の認可、リクエストの加工、外部DBの参照、レスポンス整形といった任意のコードは実装できません。必要な場合は、コードベースのAgentCore Runtimeへ移行します。
-- **クライアント認証は呼び出し側で行う**: Harness自体はWebクライアントのユーザー登録やログイン状態を管理しません。メールアドレスとパスワード、Cookie、セッショントークンなどの認証情報をHarnessやモデルへ送信してはいけません。信頼できるバックエンドで認証し、必要な場合は秘密情報ではない内部ユーザーIDだけを`runtimeUserId`およびMemory用の`actorId`として渡します。
-- **会話とMemoryの分離はIDの管理に依存する**: 会話の継続には同じ`session_id`を使用し、ユーザーごとに安定した`actorId`を割り当てます。異なるユーザー間でこれらのIDを使い回すと、会話やMemoryが意図せず共有されるおそれがあります。
-- **機密情報を入力しない**: 入力、モデル出力、Toolの実行結果がログやMemoryへ保存される可能性を考慮し、パスワード、認証トークン、Cookie、秘密鍵などを含めません。
-- **回答やTool実行は確定的ではない**: モデルの回答、Knowledge Baseの検索結果、BrowserやGatewayの実行は、モデル、権限、接続先、データの状態に依存します。重要な判断に利用する場合は、呼び出し側で検証やエラー処理を行います。
+- Semantic Memory
+- User Preference Memory
+- Summarization Memory
+- Episodic Memory
 
-そのため、ブラウザからHarnessを直接呼び出すのではなく、認証、認可、入力検証、IDの割り当てを行うバックエンドを経由させます。
+Runtimeでは、呼び出し時のセッションIDとユーザーIDをMemoryの`sessionId`と`actorId`として使用します。Memory IDが環境変数へ設定されていないローカル環境では、AgentCore Memoryを使用せずに動作します。
 
-## Runtimeエクスポートのスナップショット
+## MCP
 
-この構成はv1.1で追加しました。
+初期テンプレートには、認証不要のExa MCPサーバーへ接続するStreamable HTTPクライアントが含まれています。エージェントがこのToolを使用すると、検索内容などが外部サービスへ送信されるため、利用条件と送信データを確認してください。
 
-次のコマンドで、Harnessを`MyHarnessAgent`というStrands Python Runtimeへエクスポートしました。
-
-```bash
-agentcore export harness --name MyHarness
-```
-
-`app/MyHarnessAgent/`は、エクスポート直後からコードを編集していない比較・検証用のスナップショットです。`agentcore/agentcore.json`には、CodeZip、Python 3.14、HTTPプロトコルのRuntime登録が追加されています。元の`MyHarness`も残しているため、HarnessとRuntimeを比較できます。
-
-このCodeZipエクスポートには、次の未対応事項があります。
-
-- AgentCore BrowserはPlaywrightのNode.jsドライバーを必要とするため除外されています。Browserを含めるには、`--build Container`を指定して再エクスポートする必要があります。
-- Harnessのmanaged Memoryは、生成コード上では永続Memoryとして移行されていません。会話状態はプロセス内の最大128セッションのキャッシュであり、コールドスタートなどで失われます。
-- Gatewayクライアントは`AGENTCORE_GATEWAY_STRANDS_APP_TOOLS_URL`環境変数を参照しますが、この公開スナップショットには実際のURLを含めていません。
-- 生成コードにはShellとファイル操作Toolが含まれます。そのまま公開運用せず、必要性、権限、入力経路、プロンプトインジェクション対策を確認する必要があります。
-
-AgentCore CLIが出力した個別の注意事項は、`app/MyHarnessAgent/EXPORT_NOTES.md`を参照してください。このスナップショットは未デプロイ・未検証であり、そのまま本番利用することを目的としていません。
-
-## Knowledge Base
-
-`agentcore/agentcore.json`で次のリソースを定義しています。
-
-- S3をデータソースとする`MyKnowledgeBase`
-- Knowledge Baseへ接続するGateway `strands-app-tools`
-- 複数段階で検索する`AgenticRetrieveStream`
-- 通常検索を行う`Retrieve`
-
-Harnessはデプロイ済みGatewayのARNを参照し、Gateway経由でKnowledge BaseをToolとして呼び出します。
+不要な場合は、本番利用前にMCPクライアントを無効化または削除します。
 
 ## 検証とローカル実行
 
@@ -95,12 +72,10 @@ agentcore validate
 agentcore dev
 ```
 
-別のターミナルからHarnessを呼び出します。
+別のターミナルからローカルRuntimeを呼び出します。
 
 ```bash
-agentcore invoke --harness MyHarness \
-  --session-id "$(uuidgen)" \
-  "こんにちは"
+agentcore invoke --dev "1と2を足してください"
 ```
 
 ## デプロイ
@@ -113,25 +88,28 @@ agentcore deploy
 agentcore status
 ```
 
-managed Memoryの初回作成には時間がかかる場合があります。
+## 初期テンプレートの注意点
+
+- このリポジトリは生成直後の比較・検証用スナップショットであり、本番向けの認証、認可、入力制限、レート制限は追加していません。
+- ユーザーIDが呼び出しコンテキストにない場合は`default-user`が使用されます。複数ユーザーで運用する場合は、認証済みの非秘密ユーザーIDを必ず割り当てます。
+- セッションごとのAgentインスタンスはプロセス内キャッシュにも保持されます。プロセス再起動やスケールアウトを前提に、永続状態はAgentCore Memory側で管理します。
+- MCPなどの外部Toolへ、パスワード、Cookie、トークン、個人情報を送信しません。
+- モデル回答とTool実行は確定的ではありません。重要な用途では、呼び出し側で検証とエラー処理を行います。
 
 ## 公開用の設定値
 
-この公開リポジトリでは、AWS環境を特定できる値を次のサンプル値へ置き換えています。
+この公開リポジトリでは、AWSアカウントIDを次のプレースホルダーへ置き換えています。
 
 ```text
 AWSアカウントID: <AWS_ACCOUNT_ID>
-S3 URI: s3://example-agentcore-knowledge-base
-Gateway ARN: <AGENTCORE_GATEWAY_ARN>
 ```
 
-このままでは実環境へデプロイできません。ローカルで実際のAWSアカウントID、S3 URI、デプロイ済みGateway ARNを設定してください。
+このままでは実環境へデプロイできません。`agentcore/aws-targets.json`へ利用するAWSアカウントIDを設定してください。
 
 ## 公開時の注意
 
 - `.env.local`、AWS Credential、APIキー、トークンはGitへ登録しません。
-- `.cli`、`cdk.out`、`node_modules`などのローカル状態や生成物はGit管理外です。
+- `.cli`、`.cache`、`.venv`、`cdk.out`、`node_modules`などのローカル状態や生成物はGit管理外です。
 - `agentcore/cdk/`はAgentCore CLIによる生成コードのため、原則として直接編集しません。
-- BrowserやKnowledge Baseへ機密情報を送信しないよう、入力内容と権限設定を確認します。
 
 変更履歴は[VERSIONS.md](VERSIONS.md)に記録しています。

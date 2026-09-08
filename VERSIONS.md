@@ -1,5 +1,11 @@
 # バージョン履歴
 
+## v2.0
+
+以前のHarness構成を置き換え、AgentCore Runtimeを一から新規作成。生成後にコードを変更していない`MyAgent`を保存した初期スナップショット。
+
+Strands Agents、Claude Sonnet 4.5、CodeZip、Python 3.14、HTTP Runtimeで構成。サンプルの`add_numbers` Tool、Exa MCPクライアント、4種類のStrategyを持つ`MyAgentMemory`を含む。
+
 ## v1.1
 
 `agentcore export harness --name MyHarness`で生成された、未編集の`MyHarnessAgent`を比較・検証用のスナップショットとして保存。元の`MyHarness`も残しているため、Harness構成とRuntime構成を比較できる。
