@@ -53,11 +53,68 @@
       ]
     }
   ],
-  "knowledgeBases": [],
+  "knowledgeBases": [
+    {
+      "type": "AgentCoreKnowledgeBase",
+      "name": "MyKnowledgeBase",
+      "dataSources": [
+        {
+          "type": "S3",
+          "uri": "s3://<S3_BUCKET_NAME>"
+        }
+      ]
+    }
+  ],
   "credentials": [],
   "evaluators": [],
   "onlineEvalConfigs": [],
-  "agentCoreGateways": [],
+  "agentCoreGateways": [
+    {
+      "name": "strands-app-tools",
+      "protocolType": "None",
+      "description": "Gateway for strands-app-tools",
+      "targets": [
+        {
+          "name": "myruntime-MyKnowledgeBase",
+          "targetType": "connector",
+          "connectorId": "<AGENTCORE_CONNECTOR_ID>",
+          "configurations": [
+            {
+              "name": "AgenticRetrieveStream",
+              "description": "Streaming endpoint for agentic retrieval from knowledge bases. Performs multi-step retrieval with planning and returns results as a stream of events.",
+              "parameterValues": {
+                "retrievers": [
+                  {
+                    "configuration": {
+                      "knowledgeBase": {
+                        "knowledgeBaseId": "<BEDROCK_KNOWLEDGE_BASE_ID>"
+                      }
+                    }
+                  }
+                ],
+                "agenticRetrieveConfiguration": {
+                  "foundationModelType": "MANAGED",
+                  "rerankingModelType": "MANAGED"
+                }
+              },
+              "parameterOverrides": []
+            },
+            {
+              "name": "Retrieve",
+              "description": "Queries a knowledge base and retrieves information from it.",
+              "parameterValues": {
+                "knowledgeBaseId": "<BEDROCK_KNOWLEDGE_BASE_ID>"
+              },
+              "parameterOverrides": []
+            }
+          ]
+        }
+      ],
+      "authorizerType": "NONE",
+      "enableSemanticSearch": true,
+      "exceptionLevel": "NONE"
+    }
+  ],
   "policyEngines": [],
   "configBundles": [],
   "abTests": [],

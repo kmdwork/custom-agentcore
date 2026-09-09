@@ -2,6 +2,8 @@ from typing import Any
 from collections import OrderedDict
 from strands import Agent, tool
 import asyncio
+import base64
+import binascii
 from strands.agent.conversation_manager.null_conversation_manager import NullConversationManager
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from model.load import load_model
@@ -63,6 +65,59 @@ def agent_factory():
 get_or_create_agent = agent_factory()
 
 
+MAX_IMAGE_BYTES = 2 * 1024 * 1024
+MAX_ENCODED_IMAGE_CHARS = 4 * ((MAX_IMAGE_BYTES + 2) // 3)
+SUPPORTED_IMAGE_FORMATS = {"jpeg", "png", "webp"}
+
+
+def _is_expected_image_format(image_data: bytes, image_format: str) -> bool:
+    """Check that decoded bytes match the declared image format."""
+    if image_format == "jpeg":
+        return image_data.startswith(b"\xff\xd8\xff")
+    if image_format == "png":
+        return image_data.startswith(b"\x89PNG\r\n\x1a\n")
+    if image_format == "webp":
+        return (
+            len(image_data) >= 12
+            and image_data.startswith(b"RIFF")
+            and image_data[8:12] == b"WEBP"
+        )
+    return False
+
+
+def _extract_image(media: Any) -> dict:
+    """Validate a base64 image and return a Strands image content block."""
+    if not isinstance(media, dict) or media.get("type") != "image":
+        raise ValueError("media must be an image object")
+
+    image_format = media.get("format")
+    if image_format not in SUPPORTED_IMAGE_FORMATS:
+        raise ValueError("image format must be jpeg, png, or webp")
+
+    encoded_data = media.get("data")
+    if not isinstance(encoded_data, str) or not encoded_data:
+        raise ValueError("image data must be a non-empty base64 string")
+    if len(encoded_data) > MAX_ENCODED_IMAGE_CHARS:
+        raise ValueError("image must not exceed 2 MiB")
+
+    try:
+        image_data = base64.b64decode(encoded_data, validate=True)
+    except (binascii.Error, ValueError) as error:
+        raise ValueError("image data must be valid base64") from error
+
+    if not image_data or len(image_data) > MAX_IMAGE_BYTES:
+        raise ValueError("image must be between 1 byte and 2 MiB")
+    if not _is_expected_image_format(image_data, image_format):
+        raise ValueError("image data does not match its declared format")
+
+    return {
+        "image": {
+            "format": image_format,
+            "source": {"bytes": image_data},
+        }
+    }
+
+
 def strip_trailing_tool_use(messages: Any) -> list[dict]:
     """Strip toolUse blocks from the tail until the last message has none."""
     if not isinstance(messages, list):
@@ -109,7 +164,15 @@ def _extract_prompt(payload: dict):
     prompt = payload.get("prompt", "")
     if not isinstance(prompt, str):
         raise ValueError("prompt must be a string")
-    return prompt
+
+    media = payload.get("media")
+    if media is None:
+        return prompt
+
+    return [
+        {"text": prompt},
+        _extract_image(media),
+    ]
 
 
 def _has_inline_function_call(messages) -> bool:
