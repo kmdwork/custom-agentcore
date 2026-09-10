@@ -9,9 +9,11 @@ from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from model.load import load_model
 from mcp_client.client import get_streamable_http_mcp_client
 from memory.session import get_memory_session_manager
+from agentcore_browser import prepare_playwright, read_web_page
 
 app = BedrockAgentCoreApp()
 log = app.logger
+prepare_playwright(log)
 
 # Define a Streamable HTTP MCP Client
 mcp_clients = [get_streamable_http_mcp_client()]
@@ -23,7 +25,7 @@ You are a helpful assistant. Use tools when appropriate.
 
 
 # Define a collection of tools used by the model
-tools = []
+tools = [read_web_page]
 
 _INLINE_FUNCTION_NAMES = set()
 

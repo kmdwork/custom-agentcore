@@ -15,7 +15,15 @@
       "codeLocation": "app/MyAgent/",
       "runtimeVersion": "PYTHON_3_14",
       "networkMode": "PUBLIC",
-      "protocol": "HTTP"
+      "protocol": "HTTP",
+      "connections": [
+        {
+          "id": "managedBrowser",
+          "to": {
+            "type": "browser"
+          }
+        }
+      ]
     }
   ],
   "memories": [
@@ -77,7 +85,7 @@
         {
           "name": "myruntime-MyKnowledgeBase",
           "targetType": "connector",
-          "connectorId": "<AGENTCORE_CONNECTOR_ID>",
+          "connectorId": "bedrock-knowledge-bases",
           "configurations": [
             {
               "name": "AgenticRetrieveStream",
