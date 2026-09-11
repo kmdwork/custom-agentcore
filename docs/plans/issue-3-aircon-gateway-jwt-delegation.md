@@ -38,7 +38,7 @@ Related to #3
 - Cloudflare側PR #4 Phase 1/2の契約が対象環境へデプロイされ、5つのread endpointと同一のJWT仕様（HS256、audience `aircon-agent-api`、TTL 180秒、`aircon:read`）を提供する。
 - Cloudflareのbase URL、生成後のGateway URL/ARNはデプロイ環境で与え、公開リポジトリにはプレースホルダーまたはデプロイ時注入手順だけを置く。
 - GatewayはCloudflare JWTを検証せず、`authorizerType: NONE` とtargetの `JWT_PASSTHROUGH` によりBearer tokenを変更せず転送する。最終的な真正性・audience・期限・scope検証はCloudflareが担う。
-- AgentCore Gatewayで複数REST操作を明示できるOpenAPI schema targetを使用し、公開する操作は5つのPOST endpointに限定する。
+- AgentCore CLI 0.28.1では `JWT_PASSTHROUGH` がpassthrough target専用のため、Cloudflareの `/api/agent/aircon` をbase endpointとする `CUSTOM` passthrough targetを使用する。Gatewayのtarget prefix配下へ5つの相対パスだけをToolから送る。
 - `AIRCON_GATEWAY_URL` はRuntime環境変数から取得する。実値の注入方式は既存のAgentCore CLI/CDK生成フローに従い、生成済みCDKへ手作業で埋め込まない。
 
 ## Plan
@@ -71,14 +71,14 @@ Related to #3
 
 ### Scope
 
-- Cloudflareの5操作だけを記述するOpenAPI schemaを追加し、既存Gatewayへ専用targetを追加する。
+- Cloudflareの `/api/agent/aircon` をbase endpointとする `CUSTOM` passthrough targetを既存Gatewayへ追加する。
 - Gatewayはinbound認証情報を変換せず、target outbound authに `JWT_PASSTHROUGH` を設定する。
 - Runtimeから参照するGateway URLを `AIRCON_GATEWAY_URL` として外部設定可能にし、実値をソースへ固定しない。
 - schema-first方針に従い `agentcore validate` とCDK synth差分で構成を検証する。
 
 ### Acceptance Criteria
 
-- [ ] OpenAPI schemaには会社・物件・系統・機器・型式検索の5つのPOST操作だけが含まれ、各request/responseのJSON契約がCloudflare実装と一致する。
+- [ ] targetは `passthrough` / `CUSTOM` とし、endpointをCloudflareの `/api/agent/aircon` base pathへ限定する。
 - [ ] targetのoutbound authは `JWT_PASSTHROUGH` で、OAuth/API key/AgentCore独自JWT発行を追加しない。
 - [ ] Gatewayは `authorizerType: NONE` のままCloudflareを最終JWT検証者とし、Bearer tokenを変更せずdownstream `Authorization` へ渡せる。
 - [ ] RuntimeコードはGateway URLを `AIRCON_GATEWAY_URL` から取得し、未設定時に機密情報を含まない構成エラーを返せる。
@@ -146,7 +146,6 @@ Related to #3
 ## Expected Change Boundary
 
 - `agentcore/agentcore.json`
-- `agentcore/openapi/aircon-agent-api.yaml`（new。実際のschema配置規約があればそれに従う）
 - `app/MyAgent/main.py`
 - `app/MyAgent/aircon_tools.py`（new）
 - `app/MyAgent/tests/test_main.py`（newまたは同等のRuntime回帰テスト）
@@ -160,12 +159,12 @@ Related to #3
 ## Risks
 
 - Cloudflare JWTはHS256でOIDC discovery endpointを持たないため、Gatewayの `CUSTOM_JWT` authorizerではなく `NONE + JWT_PASSTHROUGH` を前提とする。これによりGateway自体は公開経路となるため、公開操作を5つに限定し、Cloudflare側のJWT/scope検証とレート制限を最終防御とする。
-- GatewayのOpenAPI targetが任意HS256 Bearer tokenのpassthroughを期待どおり行うかはAWS実環境依存である。Phase 2で構成検証、Phase 5で同一tokenの転送を確認し、未対応なら認証境界を変更せず別方式を再設計する。
+- GatewayのCUSTOM passthrough targetが任意HS256 Bearer tokenを期待どおり転送し、base path外へ逸脱しないことはAWS実環境依存である。Phase 2で構成検証、Phase 5で同一tokenとpath routingを確認し、未対応なら認証境界を変更せず別方式を再設計する。
 - token TTLは180秒でrefreshしないため、長時間の推論後はToolが401になる。自動再試行で期限切れtokenを繰り返さず、そのinvocationを認証失敗として終了する。
 - Agentはsession/user単位でキャッシュされるため、tokenをAgent objectやTool closureへ保持するとユーザー間・呼び出し間漏えいになる。tokenは必ずinvocation stateから都度取得する。
 - 既存 `mcp_client/client.py` には実Gateway URLに見える固定値がある。本Issueでは既存MCPの挙動を保つが、公開差分監査で新しい実値を増やさず、既存値の扱いは必要に応じて別Issueへ分離する。
 - response上限とtimeoutの具体値はCloudflareの最大responseとAgentCore制限を確認して保守的に決め、テストとREADMEで契約化する。
-- OpenAPI schemaのserver URLへ実Cloudflare URLを置く必要がある場合は、公開用placeholderとデプロイ時注入を分離し、実値をコミットしない。
+- passthrough endpointと生成後Gateway URLの実値は公開用placeholderとデプロイ時注入を分離し、コミットしない。
 
 ## Questions
 
