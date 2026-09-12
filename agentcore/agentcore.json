@@ -16,6 +16,12 @@
       "runtimeVersion": "PYTHON_3_14",
       "networkMode": "PUBLIC",
       "protocol": "HTTP",
+      "envVars": [
+        {
+          "name": "AIRCON_GATEWAY_URL",
+          "value": "<AIRCON_GATEWAY_URL>"
+        }
+      ],
       "connections": [
         {
           "id": "managedBrowser",
@@ -116,6 +122,17 @@
               "parameterOverrides": []
             }
           ]
+        },
+        {
+          "name": "aircon-cloudflare-api",
+          "targetType": "passthrough",
+          "outboundAuth": {
+            "type": "JWT_PASSTHROUGH"
+          },
+          "passthrough": {
+            "endpoint": "https://strands-kamada-hono.kmdworksnative.workers.dev/api/agent/aircon",
+            "protocolType": "CUSTOM"
+          }
         }
       ],
       "authorizerType": "NONE",

@@ -24,6 +24,44 @@ invoking the agent.
 | Variable | Required | Description |
 | --- | --- | --- |
 | `LOCAL_DEV` | No | Set to `1` to use `.env.local` instead of AgentCore Identity |
+| `AIRCON_GATEWAY_URL` | Aircon tools only | AgentCore Gateway passthrough target URL/prefix. Use HTTPS in deployed environments. |
+
+## Aircon read tools
+
+The runtime exposes five read-only tools for companies, properties, systems,
+units, and models. The caller may include a short-lived token in the invocation
+payload:
+
+```json
+{
+  "prompt": "東京本社の空調機器を調べてください",
+  "user_access_token": "<SHORT_LIVED_USER_JWT>"
+}
+```
+
+The token is copied only to Strands `invocation_state` for that invocation.
+It is not added to the prompt, conversation messages, Agent cache, Memory, or
+application logs. The tools send it through the AgentCore Gateway using JWT
+passthrough; Cloudflare remains responsible for signature, audience, expiry,
+and `aircon:read` scope validation.
+
+Configure `AIRCON_GATEWAY_URL` with the generated Gateway target URL/prefix,
+without a trailing operation path such as `companies/search`. The committed
+`<AIRCON_GATEWAY_URL>` value is only a placeholder and must be replaced or
+injected before deployment. Do not commit the real URL to a public repository.
+
+The expected format follows AgentCore Gateway path-based routing:
+
+```text
+https://<GATEWAY_ID>.gateway.bedrock-agentcore.<REGION>.amazonaws.com/aircon-cloudflare-api
+```
+
+The tool appends paths such as `/companies/search`. Gateway then forwards that
+suffix to the configured Cloudflare `/api/agent/aircon` endpoint.
+
+The delegated JWT currently has a 180-second TTL. This runtime does not refresh
+or re-sign it. An expired token results in an authentication error and the
+caller must start a new chat request. Write operations are not supported.
 
 # Developing locally
 

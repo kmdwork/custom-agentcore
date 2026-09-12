@@ -10,6 +10,7 @@ from model.load import load_model
 from mcp_client.client import get_streamable_http_mcp_client
 from memory.session import get_memory_session_manager
 from agentcore_browser import prepare_playwright, read_web_page
+from aircon_tools import AIRCON_TOOLS
 
 app = BedrockAgentCoreApp()
 log = app.logger
@@ -25,7 +26,7 @@ You are a helpful assistant. Use tools when appropriate.
 
 
 # Define a collection of tools used by the model
-tools = [read_web_page]
+tools = [read_web_page, *AIRCON_TOOLS]
 
 _INLINE_FUNCTION_NAMES = set()
 
@@ -177,6 +178,16 @@ def _extract_prompt(payload: dict):
     ]
 
 
+def _extract_invocation_state(payload: dict) -> dict[str, str]:
+    """Validate an optional delegated token without copying it into agent state."""
+    if "user_access_token" not in payload:
+        return {}
+    token = payload["user_access_token"]
+    if not isinstance(token, str) or not token.strip():
+        raise ValueError("user_access_token must be a non-empty string")
+    return {"user_access_token": token}
+
+
 def _has_inline_function_call(messages) -> bool:
     """Return True if messages contains an assistant toolUse for an inline function tool."""
     if not _INLINE_FUNCTION_NAMES or not isinstance(messages, list):
@@ -199,27 +210,32 @@ def _is_inline_function_call(event: dict) -> bool:
     return tool_use is not None and tool_use.get("name") in _INLINE_FUNCTION_NAMES
 
 
-
-@app.entrypoint
-async def invoke(payload, context):
-    log.info("Invoking Agent.....")
-
-
-    session_id = getattr(context, 'session_id', 'default-session')
-    user_id = getattr(context, 'user_id', 'default-user')
-    agent = get_or_create_agent(session_id, user_id)
-
-    prompt = _extract_prompt(payload)
-
-
+async def _stream_filtered_events(agent, prompt, invocation_state):
+    """Forward supported stream events with request-local invocation state."""
     async for event in agent.stream_async(
         prompt,
+        invocation_state=invocation_state,
     ):
         if not isinstance(event, dict) or "event" not in event:
             continue
         cbs = event["event"].get("contentBlockStart")
         if cbs is not None and not cbs.get("start"):
             continue
+        yield event
+
+
+
+@app.entrypoint
+async def invoke(payload, context):
+    log.info("Invoking Agent.....")
+
+    prompt = _extract_prompt(payload)
+    invocation_state = _extract_invocation_state(payload)
+    session_id = getattr(context, 'session_id', 'default-session')
+    user_id = getattr(context, 'user_id', 'default-user')
+    agent = get_or_create_agent(session_id, user_id)
+
+    async for event in _stream_filtered_events(agent, prompt, invocation_state):
         yield event
 
 
