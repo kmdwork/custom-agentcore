@@ -67,6 +67,7 @@ class AirconToolTests(unittest.TestCase):
         self.assertEqual(json.loads(request.data), {"query": "Kamada"})
         self.assertEqual(request.get_header("Content-type"), "application/json")
         self.assertEqual(request.get_header("Authorization"), "Bearer delegated-token")
+        self.assertEqual(request.get_header("User-agent"), "myruntime-aircon-client/1.0")
         self.assertEqual(opener.call_args.kwargs["timeout"], 10)
 
     @patch("aircon_tools.urlopen")

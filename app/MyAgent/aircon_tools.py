@@ -107,6 +107,7 @@ def _post_aircon(
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
             "Accept": "application/json",
+            "User-Agent": "myruntime-aircon-client/1.0",
         },
         method="POST",
     )
