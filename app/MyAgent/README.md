@@ -24,7 +24,8 @@ invoking the agent.
 | Variable | Required | Description |
 | --- | --- | --- |
 | `LOCAL_DEV` | No | Set to `1` to use `.env.local` instead of AgentCore Identity |
-| `AIRCON_GATEWAY_URL` | Aircon tools only | AgentCore Gateway passthrough target URL/prefix. Use HTTPS in deployed environments. |
+| `AIRCON_API_URL` | Aircon tools only | Common Aircon HTTPS API base URL. Use HTTPS in deployed environments. |
+| `AIRCON_ALLOW_INSECURE_HTTP` | No | Set to `1` only for a temporary HTTP integration test. Remove it when HTTPS is available. |
 
 ## Aircon read tools
 
@@ -35,29 +36,36 @@ payload:
 ```json
 {
   "prompt": "東京本社の空調機器を調べてください",
-  "user_access_token": "<SHORT_LIVED_USER_JWT>"
+  "user_access_token": "<SHORT_LIVED_USER_TOKEN>"
 }
 ```
 
 The token is copied only to Strands `invocation_state` for that invocation.
 It is not added to the prompt, conversation messages, Agent cache, Memory, or
-application logs. The tools send it through the AgentCore Gateway using JWT
-passthrough; Cloudflare remains responsible for signature, audience, expiry,
-and `aircon:read` scope validation.
+application logs. The tools send it directly to the configured HTTPS API as a
+Bearer token. The backend remains responsible for token validation and
+authorization; Cloudflare currently validates the JWT signature, audience,
+expiry, and `aircon:read` scope.
 
-Configure `AIRCON_GATEWAY_URL` with the generated Gateway target URL/prefix,
-without a trailing operation path such as `companies/search`. The committed
-`<AIRCON_GATEWAY_URL>` value is only a placeholder and must be replaced or
-injected before deployment. Do not commit the real URL to a public repository.
+Configure `AIRCON_API_URL` with the API base URL, without a trailing operation
+path such as `companies/search`. The tool appends the operation path to this
+base URL. The committed `<AIRCON_API_URL>` value is only a placeholder and must
+be replaced or injected before deployment. Do not commit the real URL to a
+public repository.
 
-The expected format follows AgentCore Gateway path-based routing:
+For the current Cloudflare backend, the base URL has this form:
 
 ```text
-https://<GATEWAY_ID>.gateway.bedrock-agentcore.<REGION>.amazonaws.com/aircon-cloudflare-api
+https://<CLOUDFLARE_HOST>/api/agent/aircon
 ```
 
-The tool appends paths such as `/companies/search`. Gateway then forwards that
-suffix to the configured Cloudflare `/api/agent/aircon` endpoint.
+The Aircon API is called directly and does not use the AgentCore Gateway.
+The existing Gateway remains available for Knowledge Base and MCP tools.
+
+For a temporary integration test only, setting
+`AIRCON_ALLOW_INSECURE_HTTP=1` permits an `http://` API URL. A delegated token
+sent over HTTP is not encrypted in transit. Do not use this option for normal
+operation, and remove the variable after configuring a valid HTTPS certificate.
 
 The delegated JWT currently has a 180-second TTL. This runtime does not refresh
 or re-sign it. An expired token results in an authentication error and the
