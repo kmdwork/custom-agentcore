@@ -18,8 +18,12 @@
       "protocol": "HTTP",
       "envVars": [
         {
-          "name": "AIRCON_GATEWAY_URL",
-          "value": "<AIRCON_GATEWAY_URL>"
+          "name": "AIRCON_API_URL",
+          "value": "<AIRCON_API_URL>"
+        },
+        {
+          "name": "AIRCON_ALLOW_INSECURE_HTTP",
+          "value": "0"
         }
       ],
       "connections": [
@@ -122,17 +126,6 @@
               "parameterOverrides": []
             }
           ]
-        },
-        {
-          "name": "aircon-cloudflare-api",
-          "targetType": "passthrough",
-          "outboundAuth": {
-            "type": "JWT_PASSTHROUGH"
-          },
-          "passthrough": {
-            "endpoint": "https://strands-kamada-hono.kmdworksnative.workers.dev/api/agent/aircon",
-            "protocolType": "CUSTOM"
-          }
         }
       ],
       "authorizerType": "NONE",

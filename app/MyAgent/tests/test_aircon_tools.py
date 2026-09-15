@@ -42,7 +42,7 @@ class AirconToolTests(unittest.TestCase):
     def setUp(self):
         self.env = patch.dict(
             os.environ,
-            {"AIRCON_GATEWAY_URL": "https://gateway.example/aircon-target"},
+            {"AIRCON_API_URL": "https://api.example/agent/aircon"},
             clear=True,
         )
         self.env.start()
@@ -62,7 +62,7 @@ class AirconToolTests(unittest.TestCase):
 
         self.assertEqual(result, {"companies": [{"id": "company-1"}]})
         request = opener.call_args.args[0]
-        self.assertEqual(request.full_url, "https://gateway.example/aircon-target/companies/search")
+        self.assertEqual(request.full_url, "https://api.example/agent/aircon/companies/search")
         self.assertEqual(request.method, "POST")
         self.assertEqual(json.loads(request.data), {"query": "Kamada"})
         self.assertEqual(request.get_header("Content-type"), "application/json")
@@ -96,7 +96,7 @@ class AirconToolTests(unittest.TestCase):
         for status, message in cases.items():
             with self.subTest(status=status):
                 error = HTTPError(
-                    "https://gateway.example", status, "upstream", {}, io.BytesIO()
+                    "https://api.example", status, "upstream", {}, io.BytesIO()
                 )
                 opener.side_effect = error
                 try:
@@ -131,12 +131,45 @@ class AirconToolTests(unittest.TestCase):
                 with self.assertRaisesRegex(AirconToolError, message):
                     _post_aircon("companies/search", {}, "companies", FakeToolContext("token"))
 
-    def test_rejects_unconfigured_or_insecure_gateway(self):
-        for value in ("", "<AIRCON_GATEWAY_URL>", "http://public.example/api"):
+    def test_rejects_unconfigured_or_insecure_api(self):
+        for value in ("", "<AIRCON_API_URL>", "http://public.example/api"):
             with self.subTest(value=value), patch.dict(
-                os.environ, {"AIRCON_GATEWAY_URL": value}, clear=True
+                os.environ, {"AIRCON_API_URL": value}, clear=True
             ), self.assertRaises(AirconToolError):
                 _post_aircon("companies/search", {}, "companies", FakeToolContext("token"))
+
+    @patch("aircon_tools.urlopen")
+    def test_allows_http_only_with_explicit_opt_in(self, opener):
+        opener.return_value = FakeResponse(b'{"companies":[]}')
+
+        with patch.dict(
+            os.environ,
+            {
+                "AIRCON_API_URL": "http://public.example/api",
+                "AIRCON_ALLOW_INSECURE_HTTP": "1",
+            },
+            clear=True,
+        ):
+            result = _post_aircon(
+                "companies/search",
+                {},
+                "companies",
+                FakeToolContext("temporary-token"),
+            )
+
+        self.assertEqual(result, {"companies": []})
+        self.assertEqual(
+            opener.call_args.args[0].full_url,
+            "http://public.example/api/companies/search",
+        )
+
+    def test_legacy_gateway_url_is_not_used(self):
+        with patch.dict(
+            os.environ,
+            {"AIRCON_GATEWAY_URL": "https://gateway.example/aircon-target"},
+            clear=True,
+        ), self.assertRaisesRegex(AirconToolError, "API is not configured"):
+            _post_aircon("companies/search", {}, "companies", FakeToolContext("token"))
 
 
 if __name__ == "__main__":

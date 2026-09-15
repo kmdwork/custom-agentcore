@@ -1,4 +1,4 @@
-"""Read-only Aircon tools backed by an AgentCore Gateway target."""
+"""Read-only Aircon tools backed by a common HTTPS API."""
 
 from __future__ import annotations
 
@@ -29,27 +29,35 @@ def _access_token(tool_context: ToolContext) -> str:
     return token
 
 
-def _gateway_url(operation: str) -> str:
-    base_url = os.getenv("AIRCON_GATEWAY_URL", "").rstrip("/")
-    if not base_url or base_url == "<AIRCON_GATEWAY_URL>":
-        raise AirconToolError("Aircon Gateway is not configured")
+def _api_url(operation: str) -> str:
+    base_url = os.getenv("AIRCON_API_URL", "").rstrip("/")
+    if not base_url or base_url == "<AIRCON_API_URL>":
+        raise AirconToolError("Aircon API is not configured")
 
     parsed = urlsplit(base_url)
     local_dev = os.getenv("LOCAL_DEV") == "1"
-    valid_local = local_dev and parsed.scheme == "http" and parsed.hostname in {
-        "localhost",
-        "127.0.0.1",
-        "::1",
-    }
+    allow_insecure_http = os.getenv("AIRCON_ALLOW_INSECURE_HTTP") == "1"
+    valid_http = parsed.scheme == "http" and (
+        allow_insecure_http
+        or (
+            local_dev
+            and parsed.hostname
+            in {
+                "localhost",
+                "127.0.0.1",
+                "::1",
+            }
+        )
+    )
     if (
         not parsed.hostname
         or parsed.username is not None
         or parsed.password is not None
         or parsed.query
         or parsed.fragment
-        or (parsed.scheme != "https" and not valid_local)
+        or (parsed.scheme != "https" and not valid_http)
     ):
-        raise AirconToolError("Aircon Gateway configuration is invalid")
+        raise AirconToolError("Aircon API configuration is invalid")
     return f"{base_url}/{operation}"
 
 
@@ -101,7 +109,7 @@ def _post_aircon(
 ) -> dict[str, list[Any]]:
     token = _access_token(tool_context)
     request = Request(
-        _gateway_url(operation),
+        _api_url(operation),
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
         headers={
             "Authorization": f"Bearer {token}",
