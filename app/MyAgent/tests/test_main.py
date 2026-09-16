@@ -15,6 +15,38 @@ class RuntimeInputTests(unittest.TestCase):
     def test_token_is_optional(self):
         self.assertEqual(main._extract_invocation_state({"prompt": "hello"}), {})
 
+    def test_resume_contract_accepts_only_approve_or_reject(self):
+        self.assertEqual(main._extract_prompt({
+            "interrupt_responses": [{
+                "interrupt_id": "interrupt-1",
+                "response": "approve",
+            }],
+        }), [{
+            "interruptResponse": {
+                "interruptId": "interrupt-1",
+                "response": "approve",
+            },
+        }])
+        for response in ["yes", "", None, 1]:
+            with self.subTest(response=response), self.assertRaises(ValueError):
+                main._extract_prompt({
+                    "interrupt_responses": [{
+                        "interrupt_id": "interrupt-1",
+                        "response": response,
+                    }],
+                })
+
+    def test_rejects_malformed_resume_and_non_object_payloads(self):
+        invalid_payloads = [
+            "prompt",
+            None,
+            {"interrupt_responses": []},
+            {"interrupt_responses": [{"response": "approve"}]},
+        ]
+        for payload in invalid_payloads:
+            with self.subTest(payload=payload), self.assertRaises(ValueError):
+                main._extract_prompt(payload)
+
     def test_rejects_invalid_tokens_before_agent_use(self):
         for token in ("", "   ", 123, None, []):
             with self.subTest(token=token), self.assertRaises(ValueError):
@@ -30,6 +62,7 @@ class RuntimeInputTests(unittest.TestCase):
             "search_aircon_systems",
             "search_aircon_units",
             "search_aircon_models",
+            "apply_aircon_changes",
         }.issubset(names))
         self.assertTrue(any(type(value).__name__ == "MCPClient" for value in main.tools))
 
@@ -47,6 +80,11 @@ class RuntimeInputTests(unittest.TestCase):
         })
         self.assertEqual(result[0], {"text": "describe"})
         self.assertEqual(result[1]["image"]["source"]["bytes"], png)
+
+    def test_system_prompt_delegates_write_approval_to_the_tool(self):
+        self.assertIn("apply_aircon_changes", main.DEFAULT_SYSTEM_PROMPT)
+        self.assertIn("Do not ask the user", main.DEFAULT_SYSTEM_PROMPT)
+        self.assertIn("conversational confirmation", main.DEFAULT_SYSTEM_PROMPT)
 
 
 class RuntimeStreamingTests(unittest.IsolatedAsyncioTestCase):
