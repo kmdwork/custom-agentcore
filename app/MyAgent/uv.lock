@@ -1463,7 +1463,7 @@ requires-dist = [
     { name = "bedrock-agentcore", specifier = ">=1.9.1" },
     { name = "botocore", extras = ["crt"], specifier = ">=1.35.0" },
     { name = "mcp", specifier = "~=1.24.0" },
-    { name = "strands-agents", specifier = ">=1.15.0" },
+    { name = "strands-agents", specifier = "==1.54.0" },
     { name = "strands-agents-tools", extras = ["agent-core-browser"], specifier = "==0.8.8" },
 ]
 

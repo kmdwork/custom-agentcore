@@ -69,7 +69,51 @@ operation, and remove the variable after configuring a valid HTTPS certificate.
 
 The delegated JWT currently has a 180-second TTL. This runtime does not refresh
 or re-sign it. An expired token results in an authentication error and the
-caller must start a new chat request. Write operations are not supported.
+caller must start a new chat request.
+
+## Approval-gated Aircon writes
+
+The runtime exposes one write tool, `apply_aircon_changes`, for create and
+update operations on companies, properties, systems, models, and units. Delete
+operations are not supported. A request may contain up to 20 operations, and
+each operation is validated against an allowlist before any side effect.
+
+The tool always interrupts before calling the write API. The interrupt reason
+contains only the tool name and validated operations so the client can display
+the exact pending changes; it never contains the delegated token. A response
+other than the exact string `approve` rejects the operation without making an
+HTTP request.
+
+For a create or update request with sufficient information, the agent calls
+`apply_aircon_changes` directly. It does not ask for separate conversational
+confirmation: the interrupt is the approval step shown by the client. If
+required information is missing, the agent asks one focused follow-up question.
+
+On approval, resume the same runtime session and user identity with the
+interrupt response and a newly issued write-enabled token:
+
+```json
+{
+  "actor_id": "<STABLE_ACTOR_ID>",
+  "interrupt_responses": [
+    {
+      "interrupt_id": "<INTERRUPT_ID>",
+      "response": "approve"
+    }
+  ],
+  "user_access_token": "<SHORT_LIVED_WRITE_TOKEN>"
+}
+```
+
+The resumed tool obtains this new token only from request-local
+`ToolContext.invocation_state` and sends it to:
+
+```text
+POST {AIRCON_API_URL}/changes/apply
+```
+
+The backend must validate the token and require write permission. The endpoint
+and write-token issuance must exist before an end-to-end write can succeed.
 
 # Developing locally
 
