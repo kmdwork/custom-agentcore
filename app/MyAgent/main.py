@@ -12,7 +12,8 @@ from memory.session import get_memory_session_manager
 from agentcore_browser import prepare_playwright, read_web_page
 from aircon_tools import AIRCON_TOOLS
 from aircon_write_tools import AIRCON_WRITE_TOOLS
-from approval_poc import test_write_action
+
+# from approval_poc import test_write_action
 
 app = BedrockAgentCoreApp()
 log = app.logger
@@ -35,7 +36,7 @@ information is missing or ambiguous, ask a focused follow-up question instead.
 
 
 # Define a collection of tools used by the model
-tools = [read_web_page, *AIRCON_TOOLS, *AIRCON_WRITE_TOOLS, test_write_action]
+tools = [read_web_page, *AIRCON_TOOLS, *AIRCON_WRITE_TOOLS]
 
 _INLINE_FUNCTION_NAMES = set()
 
@@ -157,23 +158,30 @@ def strip_trailing_tool_use(messages: Any) -> list[dict]:
 
 def _extract_prompt(payload: dict):
     """Accept validated harness messages, tool results, or a plain prompt string."""
+
     if not isinstance(payload, dict):
         raise ValueError("payload must be a JSON object")
+
     if "interrupt_responses" in payload:
         responses = payload["interrupt_responses"]
+
         if not isinstance(responses, list) or not responses:
             raise ValueError("interrupt_responses must be a non-empty list")
 
         result = []
+
         for item in responses:
             if not isinstance(item, dict):
                 raise ValueError("interrupt response must be an object")
+
             interrupt_id = item.get("interrupt_id")
             response = item.get("response")
+
             if not isinstance(interrupt_id, str) or not interrupt_id:
                 raise ValueError("interrupt_id must be a non-empty string")
             if response not in {"approve", "reject"}:
                 raise ValueError("interrupt response must be approve or reject")
+
             result.append({
                 "interruptResponse": {
                     "interruptId": interrupt_id,
@@ -181,6 +189,7 @@ def _extract_prompt(payload: dict):
                 }
             })
         return result
+
     if "messages" in payload:
         return strip_trailing_tool_use(payload["messages"])
     if "tool_results" in payload:
@@ -241,16 +250,30 @@ def _is_inline_function_call(event: dict) -> bool:
     return tool_use is not None and tool_use.get("name") in _INLINE_FUNCTION_NAMES
 
 
+# async def _stream_filtered_events(agent, prompt, invocation_state):
+#     """Forward supported stream events with request-local invocation state."""
+#     async for event in agent.stream_async(
+#         prompt,
+#         invocation_state=invocation_state,
+#     ):
+#         if not isinstance(event, dict) or "event" not in event:
+#             continue
+#         cbs = event["event"].get("contentBlockStart")
+#         if cbs is not None and not cbs.get("start"):
+#             continue
+#         yield event
+
 async def _stream_filtered_events(agent, prompt, invocation_state):
-    """Forward supported stream events with request-local invocation state."""
     async for event in agent.stream_async(
         prompt,
         invocation_state=invocation_state,
     ):
         if not isinstance(event, dict):
             continue
+
         if "result" in event:
             result = event["result"]
+
             if result.stop_reason == "interrupt":
                 yield {
                     "type": "interrupt",
@@ -263,22 +286,26 @@ async def _stream_filtered_events(agent, prompt, invocation_state):
                         for interrupt in result.interrupts
                     ],
                 }
+
             continue
+
         if "event" not in event:
             continue
+
         cbs = event["event"].get("contentBlockStart")
         if cbs is not None and not cbs.get("start"):
             continue
-        yield event
 
+        yield event
 
 
 def _extract_actor_id(payload: dict) -> str:
     actor_id = payload.get("actor_id")
+
     if not isinstance(actor_id, str) or not actor_id.strip():
         raise ValueError("actor_id must be a non-empty string")
-    return actor_id
 
+    return actor_id
 
 @app.entrypoint
 async def invoke(payload, context):
@@ -292,6 +319,7 @@ async def invoke(payload, context):
 
     async for event in _stream_filtered_events(agent, prompt, invocation_state):
         yield event
+
 
 
 if __name__ == "__main__":

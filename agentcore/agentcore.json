@@ -23,7 +23,7 @@
         },
         {
           "name": "AIRCON_ALLOW_INSECURE_HTTP",
-          "value": "0"
+          "value": "1"
         }
       ],
       "connections": [

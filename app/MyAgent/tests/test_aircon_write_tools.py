@@ -176,8 +176,7 @@ class AirconWriteToolTests(unittest.TestCase):
         opener.return_value = FakeResponse(
             b'{"success":true,"results":[{"operation":"create_company","id":"company-1"}]}'
         )
-        expected_token = "test-write-token"
-        context = FakeToolContext(token=expected_token)
+        context = FakeToolContext(token="resume-write-token")
         operations = [{"type": "create_company", "name": "Company"}]
 
         result = _post_aircon_changes(operations, context)
@@ -187,10 +186,7 @@ class AirconWriteToolTests(unittest.TestCase):
         self.assertEqual(request.full_url, "https://api.example/agent/aircon/changes/apply")
         self.assertEqual(request.method, "POST")
         self.assertEqual(json.loads(request.data), {"operations": operations})
-        self.assertEqual(
-            request.get_header("Authorization"),
-            f"Bearer {expected_token}",
-        )
+        self.assertEqual(request.get_header("Authorization"), "Bearer resume-write-token")
         self.assertEqual(opener.call_args.kwargs["timeout"], 10)
 
     @patch("aircon_write_tools.urlopen")

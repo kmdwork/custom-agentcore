@@ -27,7 +27,8 @@ class RuntimeInputTests(unittest.TestCase):
                 "response": "approve",
             },
         }])
-        for response in ["yes", "", None, 1]:
+        invalid_responses = ["yes", "", None, 1]
+        for response in invalid_responses:
             with self.subTest(response=response), self.assertRaises(ValueError):
                 main._extract_prompt({
                     "interrupt_responses": [{
