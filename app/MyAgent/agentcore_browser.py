@@ -6,6 +6,7 @@ import ipaddress
 import logging
 import os
 from pathlib import Path
+import playwright
 import shutil
 import socket
 import stat
@@ -25,7 +26,6 @@ _PLAYWRIGHT_NODE_PATH = Path("/tmp/playwright-driver-node")
 
 def prepare_playwright(log: logging.Logger) -> None:
     """Copy Playwright's packaged Node binary to writable storage for CodeZip."""
-    import playwright
 
     packaged_node = Path(playwright.__file__).resolve().parent / "driver" / "node"
     if not packaged_node.is_file():

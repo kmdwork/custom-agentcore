@@ -49,9 +49,7 @@ expiry, and `aircon:read` scope.
 
 Configure `AIRCON_API_URL` with the API base URL, without a trailing operation
 path such as `companies/search`. The tool appends the operation path to this
-base URL. The committed `<AIRCON_API_URL>` value is only a placeholder and must
-be replaced or injected before deployment. Do not commit the real URL to a
-public repository.
+base URL.
 
 For the current Cloudflare backend, the base URL has this form:
 
@@ -77,17 +75,38 @@ The runtime exposes one write tool, `apply_aircon_changes`, for create and
 update operations on companies, properties, systems, models, and units. Delete
 operations are not supported. A request may contain up to 20 operations, and
 each operation is validated against an allowlist before any side effect.
+Supported operation contracts are:
 
-The tool always interrupts before calling the write API. The interrupt reason
+```text
+create_company:  name
+create_property: name, exactly one of company_id/company_ref, optional address
+create_system:   name, exactly one of property_id/property_ref
+create_model:    manufacturer, model_number
+create_unit:     name, unit_type, exactly one of system_id/system_ref,
+                 optional model_id/model_ref
+update_company:  id and at least one of name
+update_property: id and at least one of company_id/name/address
+update_system:   id and at least one of property_id/name
+update_model:    id and at least one of manufacturer/model_number
+update_unit:     id and at least one of system_id/model_id/name/unit_type
+```
+
+A `*_ref` value is a zero-based index that must reference a compatible earlier
+create operation in the same request. `unit_type` accepts only `indoor` or
+`outdoor`. Unknown fields, empty strings, oversized values, invalid references,
+and unsupported operation types are rejected before approval is requested.
+
+The tool always interrupts before calling the write API. Its interrupt reason
 contains only the tool name and validated operations so the client can display
-the exact pending changes; it never contains the delegated token. A response
+the exact pending changes. It never contains the delegated token. A response
 other than the exact string `approve` rejects the operation without making an
 HTTP request.
 
 For a create or update request with sufficient information, the agent calls
-`apply_aircon_changes` directly. It does not ask for separate conversational
-confirmation: the interrupt is the approval step shown by the client. If
-required information is missing, the agent asks one focused follow-up question.
+`apply_aircon_changes` directly. It does not ask for a separate conversational
+confirmation: the interrupt is the sole approval step and is displayed by the
+client as approval buttons. If information required to construct a valid
+operation is missing, the agent asks one focused follow-up question instead.
 
 On approval, resume the same runtime session and user identity with the
 interrupt response and a newly issued write-enabled token:
@@ -105,15 +124,16 @@ interrupt response and a newly issued write-enabled token:
 }
 ```
 
-The resumed tool obtains this new token only from request-local
-`ToolContext.invocation_state` and sends it to:
+The resumed tool obtains this new token from request-local
+`ToolContext.invocation_state` and sends it as a Bearer token to:
 
 ```text
 POST {AIRCON_API_URL}/changes/apply
 ```
 
-The backend must validate the token and require write permission. The endpoint
-and write-token issuance must exist before an end-to-end write can succeed.
+The backend must validate the token and require write permission. The backend
+endpoint and write-token issuance must exist before an end-to-end write can
+succeed.
 
 # Developing locally
 
