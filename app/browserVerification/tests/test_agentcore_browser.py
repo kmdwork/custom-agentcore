@@ -126,9 +126,10 @@ class AgentCoreBrowserTests(unittest.TestCase):
         self.assertTrue(browser.closed)
         self.assertTrue(session.exited)
 
-    @patch("agentcore_browser.socket.getaddrinfo", return_value=[
-        (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 80))
-    ])
+    @patch(
+        "agentcore_browser.socket.getaddrinfo",
+        return_value=[(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 80))],
+    )
     def test_rejects_private_address(self, _getaddrinfo):
         with self.assertRaises(ValueError):
             _validate_public_url("http://example.com")

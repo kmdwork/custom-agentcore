@@ -1,4 +1,4 @@
-"""A small, one-shot AgentCore Browser tool for public web pages."""
+"""AgentCore Browser + Playwright verification tool."""
 
 from __future__ import annotations
 
@@ -6,7 +6,6 @@ import ipaddress
 import logging
 import os
 from pathlib import Path
-import playwright
 import shutil
 import socket
 import stat
@@ -14,6 +13,7 @@ from typing import Callable
 from urllib.parse import urlsplit
 from uuid import uuid4
 
+import playwright
 from bedrock_agentcore.tools.browser_client import browser_session
 from playwright.sync_api import sync_playwright
 from strands import tool
@@ -25,8 +25,7 @@ _PLAYWRIGHT_NODE_PATH = Path("/tmp/playwright-driver-node")
 
 
 def prepare_playwright(log: logging.Logger) -> None:
-    """Copy Playwright's packaged Node binary to writable storage for CodeZip."""
-
+    """Copy Playwright's Node driver to writable storage for CodeZip."""
     packaged_node = Path(playwright.__file__).resolve().parent / "driver" / "node"
     if not packaged_node.is_file():
         raise RuntimeError("Playwright's packaged Node executable was not found")
@@ -43,7 +42,7 @@ def prepare_playwright(log: logging.Logger) -> None:
 
 
 def _validate_public_url(url: str) -> str:
-    """Allow only HTTP(S) URLs whose hostname resolves exclusively to public IPs."""
+    """Allow only public HTTP(S) destinations."""
     if not isinstance(url, str) or not url or len(url) > 2_048:
         raise ValueError("url must be a non-empty string of at most 2048 characters")
 
@@ -69,10 +68,8 @@ def _validate_public_url(url: str) -> str:
 
     if not addresses:
         raise ValueError("URL hostname could not be resolved")
-    for address in addresses:
-        ip = ipaddress.ip_address(address)
-        if not ip.is_global:
-            raise ValueError("local and private network URLs are not allowed")
+    if any(not ipaddress.ip_address(address).is_global for address in addresses):
+        raise ValueError("local and private network URLs are not allowed")
 
     return url
 
@@ -83,17 +80,17 @@ def _read_web_page(
     session_factory: Callable = browser_session,
     playwright_factory: Callable = sync_playwright,
 ) -> str:
-    """Navigate once, extract visible body text, and close every resource."""
+    """Open one page in AgentCore Browser and return its visible text."""
     target_url = _validate_public_url(url)
     region = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION")
     if not region:
         raise RuntimeError("AWS region is not configured")
 
-    session_name = f"read-web-{uuid4().hex[:24]}"
+    session_name = f"browser-verification-{uuid4().hex[:20]}"
     with session_factory(region, name=session_name) as browser_client:
         ws_url, headers = browser_client.generate_ws_headers()
-        with playwright_factory() as playwright:
-            browser = playwright.chromium.connect_over_cdp(ws_url, headers=headers)
+        with playwright_factory() as playwright_api:
+            browser = playwright_api.chromium.connect_over_cdp(ws_url, headers=headers)
             try:
                 context = browser.contexts[0] if browser.contexts else browser.new_context()
                 page = context.pages[0] if context.pages else context.new_page()
@@ -124,5 +121,5 @@ def _read_web_page(
 
 @tool
 def read_web_page(url: str) -> str:
-    """Read visible text from a public HTTP(S) web page. Use only for public pages."""
+    """Read visible text from a public HTTP(S) page using AgentCore Browser."""
     return _read_web_page(url)

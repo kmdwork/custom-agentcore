@@ -1,31 +1,21 @@
 {
   "$schema": "https://schema.agentcore.aws.dev/v1/agentcore.json",
-  "name": "myruntime",
+  "name": "browserVerification",
   "version": 1,
   "managedBy": "CDK",
   "tags": {
     "agentcore:created-by": "agentcore-cli",
-    "agentcore:project-name": "myruntime"
+    "agentcore:project-name": "browserVerification"
   },
   "runtimes": [
     {
-      "name": "MyAgent",
+      "name": "browserVerification",
       "build": "CodeZip",
       "entrypoint": "main.py",
-      "codeLocation": "app/MyAgent/",
+      "codeLocation": "app/browserVerification/",
       "runtimeVersion": "PYTHON_3_14",
       "networkMode": "PUBLIC",
       "protocol": "HTTP",
-      "envVars": [
-        {
-          "name": "AIRCON_API_URL",
-          "value": "<AIRCON_API_URL>"
-        },
-        {
-          "name": "AIRCON_ALLOW_INSECURE_HTTP",
-          "value": "1"
-        }
-      ],
       "connections": [
         {
           "id": "managedBrowser",
@@ -36,107 +26,17 @@
       ]
     }
   ],
-  "memories": [
-    {
-      "name": "MyAgentMemory",
-      "eventExpiryDuration": 30,
-      "strategies": [
-        {
-          "type": "SEMANTIC",
-          "namespaceTemplates": [
-            "/users/{actorId}/facts"
-          ]
-        },
-        {
-          "type": "USER_PREFERENCE",
-          "namespaceTemplates": [
-            "/users/{actorId}/preferences"
-          ]
-        },
-        {
-          "type": "SUMMARIZATION",
-          "namespaceTemplates": [
-            "/summaries/{actorId}/{sessionId}"
-          ]
-        },
-        {
-          "type": "EPISODIC",
-          "namespaceTemplates": [
-            "/episodes/{actorId}/{sessionId}"
-          ],
-          "reflectionNamespaceTemplates": [
-            "/episodes/{actorId}"
-          ]
-        }
-      ]
-    }
-  ],
-  "knowledgeBases": [
-    {
-      "type": "AgentCoreKnowledgeBase",
-      "name": "MyKnowledgeBase",
-      "dataSources": [
-        {
-          "type": "S3",
-          "uri": "s3://<S3_BUCKET_NAME>"
-        }
-      ]
-    }
-  ],
+  "memories": [],
+  "knowledgeBases": [],
   "credentials": [],
   "evaluators": [],
   "onlineEvalConfigs": [],
-  "agentCoreGateways": [
-    {
-      "name": "strands-app-tools",
-      "protocolType": "None",
-      "description": "Gateway for strands-app-tools",
-      "targets": [
-        {
-          "name": "myruntime-MyKnowledgeBase",
-          "targetType": "connector",
-          "connectorId": "bedrock-knowledge-bases",
-          "configurations": [
-            {
-              "name": "AgenticRetrieveStream",
-              "description": "Streaming endpoint for agentic retrieval from knowledge bases. Performs multi-step retrieval with planning and returns results as a stream of events.",
-              "parameterValues": {
-                "retrievers": [
-                  {
-                    "configuration": {
-                      "knowledgeBase": {
-                        "knowledgeBaseId": "<BEDROCK_KNOWLEDGE_BASE_ID>"
-                      }
-                    }
-                  }
-                ],
-                "agenticRetrieveConfiguration": {
-                  "foundationModelType": "MANAGED",
-                  "rerankingModelType": "MANAGED"
-                }
-              },
-              "parameterOverrides": []
-            },
-            {
-              "name": "Retrieve",
-              "description": "Queries a knowledge base and retrieves information from it.",
-              "parameterValues": {
-                "knowledgeBaseId": "<BEDROCK_KNOWLEDGE_BASE_ID>"
-              },
-              "parameterOverrides": []
-            }
-          ]
-        }
-      ],
-      "authorizerType": "NONE",
-      "enableSemanticSearch": true,
-      "exceptionLevel": "NONE"
-    }
-  ],
+  "agentCoreGateways": [],
   "policyEngines": [],
   "configBundles": [],
   "abTests": [],
   "harnesses": [],
   "datasets": [],
+  "capacityProviders": [],
   "payments": []
 }
