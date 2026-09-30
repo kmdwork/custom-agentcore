@@ -3,8 +3,9 @@ from collections import OrderedDict
 from datetime import datetime, timezone
 from strands import Agent, tool
 from strands.agent.conversation_manager.null_conversation_manager import NullConversationManager
+from strands_tools.browser import AgentCoreBrowser
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
-from agentcore_browser import prepare_playwright, read_web_page
+from agentcore_browser import prepare_playwright
 from model.load import load_model
 
 app = BedrockAgentCoreApp()
@@ -15,7 +16,8 @@ DEFAULT_SYSTEM_PROMPT = """
 You are a helpful assistant. Use tools when appropriate.
 
 You may not be accurately recognizing the current time by default.
-Therefore, when using the `read_web_page` tool to check a webpage, please first use the `get_current_datetime` tool to retrieve the actual current date and time before proceeding.
+Therefore, when using the `browser` tool to check a webpage, please first use the `get_current_datetime` tool to retrieve the actual current date and time before proceeding.
+Initialize a browser session before using it, and close the session when the task is complete.
 """
 
 
@@ -25,8 +27,9 @@ def get_current_datetime() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-# Keep browser implementation in agentcore_browser.py.
-tools = [read_web_page, get_current_datetime]
+# AgentCoreBrowser provides session management and Playwright actions.
+browser = AgentCoreBrowser()
+tools = [browser.browser, get_current_datetime]
 
 _INLINE_FUNCTION_NAMES = set()
 

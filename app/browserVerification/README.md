@@ -1,18 +1,18 @@
 # A. AgentCore Browser + Playwright
 
-AgentCore CLIで生成したRuntimeから、マネージドなAgentCore Browserへ接続し、Playwrightで公開Webページを読む検証です。
+AgentCore CLIで生成したRuntimeから、マネージドなAgentCore Browserへ接続し、Playwrightで公開Webページを読み書き操作する検証です。
 
-Browser処理は `agentcore_browser.py` に分離し、`main.py`には次の3点だけを追加しています。
+Browser処理は `strands_tools.browser.AgentCoreBrowser` に任せ、`agentcore_browser.py` にはCodeZip固有の準備処理だけを残しています。`main.py`の追加は次の3点です。
 
-1. `prepare_playwright` と `read_web_page` のimport
+1. `prepare_playwright` と `AgentCoreBrowser` のimport
 2. CodeZip向けPlaywrightドライバーの初期化
-3. `read_web_page` のTool登録
+3. `browser.browser` のTool登録
 
 ## 構成
 
 ```text
 AgentCore Runtime (CodeZip)
-  └─ read_web_page Tool
+  └─ browser Tool (strands-agents-tools)
        └─ AgentCore Browser session
             └─ Playwright connect_over_cdp
                  └─ public HTTP(S) page
@@ -46,25 +46,29 @@ agentcore dev
 別ターミナルから、明示的にBrowser Toolの利用を依頼します。
 
 ```bash
-agentcore invoke --dev "read_web_pageを使って https://example.com の内容を要約してください"
+agentcore invoke --dev "browserツールを使って https://example.com の内容を要約し、最後にブラウザセッションを閉じてください"
 ```
 
 AWSへデプロイして確認する場合:
 
 ```bash
 agentcore deploy
-agentcore invoke "read_web_pageを使って https://example.com の内容を要約してください"
+agentcore invoke "browserツールを使って https://example.com の内容を要約し、最後にブラウザセッションを閉じてください"
 ```
 
-AgentCore BrowserのセッションはTool呼び出しごとに開始し、ページ本文を取得した後に終了します。
+`browser` Toolは操作ごとに呼び出します。典型的な順序は次のとおりです。
+
+1. `init_session`
+2. `navigate`
+3. `type`、`click`、`press_key`、`get_text` など
+4. `close`
 
 ## 実装上の注意
 
-- Runtimeはユーザー入力URLを受け取るため、localhost、プライベートIP、URL内認証情報を拒否します。
-- リダイレクト先とページ内リクエストも同じ規則で検査します。
-- 取得本文は20,000文字で打ち切ります。
 - CodeZipの配置先は読み取り専用なので、Playwright同梱のNodeドライバーを `/tmp` にコピーして実行します。
 - AgentCore BrowserへCDP接続するため、Runtime内へChromium本体をインストールしません。
+- 標準Toolは `evaluate`、`execute_cdp`、Cookie操作なども公開します。
+- 以前の独自実装にあったプライベートURL拒否や本文サイズ制限は含まれません。必要ならGatewayやネットワーク境界、Toolラッパーで別途制限します。
 
 ---
 
