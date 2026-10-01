@@ -15,15 +15,7 @@
       "codeLocation": "app/browserVerification/",
       "runtimeVersion": "PYTHON_3_14",
       "networkMode": "PUBLIC",
-      "protocol": "HTTP",
-      "connections": [
-        {
-          "id": "managedBrowser",
-          "to": {
-            "type": "browser"
-          }
-        }
-      ]
+      "protocol": "HTTP"
     }
   ],
   "memories": [],
