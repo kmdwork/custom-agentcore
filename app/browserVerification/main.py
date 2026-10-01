@@ -2,10 +2,14 @@ from typing import Any
 from collections import OrderedDict
 from datetime import datetime, timezone
 from strands import Agent, tool
+from mcp.client.streamable_http import streamablehttp_client
+from strands.tools.mcp.mcp_client import MCPClient
 from strands.agent.conversation_manager.null_conversation_manager import NullConversationManager
-from strands_tools import http_request
+# from strands_tools import http_request
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from model.load import load_model
+
+import os
 
 app = BedrockAgentCoreApp()
 log = app.logger
@@ -14,9 +18,15 @@ DEFAULT_SYSTEM_PROMPT = """
 You are a helpful assistant. Use tools when appropriate.
 
 You may not be accurately recognizing the current time by default.
-Therefore, when using the `http_request` tool to check a webpage, please first use the `get_current_datetime` tool to retrieve the actual current date and time before proceeding.
+Therefore, when using the `WebSearchTarget___WebSearch` tool to check a webpage, please first use the `get_current_datetime` tool to retrieve the actual current date and time before proceeding.
 """
 
+def create_web_search_client() -> MCPClient:
+    gateway_url = os.environ["WEB_SEARCH_GATEWAY_URL"]
+
+    return MCPClient(
+        lambda: streamablehttp_client(gateway_url)
+    )
 
 @tool
 def get_current_datetime() -> str:
@@ -24,7 +34,7 @@ def get_current_datetime() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-tools = [http_request, get_current_datetime]
+tools = [get_current_datetime, create_web_search_client()]
 
 _INLINE_FUNCTION_NAMES = set()
 

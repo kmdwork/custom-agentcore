@@ -15,7 +15,13 @@
       "codeLocation": "app/browserVerification/",
       "runtimeVersion": "PYTHON_3_14",
       "networkMode": "PUBLIC",
-      "protocol": "HTTP"
+      "protocol": "HTTP",
+      "envVars": [
+        {
+          "name": "WEB_SEARCH_GATEWAY_URL",
+          "value": "<WEB_SEARCH_GATEWAY_URL>"
+        }
+      ]
     }
   ],
   "memories": [],
@@ -23,7 +29,38 @@
   "credentials": [],
   "evaluators": [],
   "onlineEvalConfigs": [],
-  "agentCoreGateways": [],
+  "agentCoreGateways": [
+    {
+      "name": "WebSearchGateway",
+      "protocolType": "MCP",
+      "description": "Gateway for WebSearchGateway",
+      "targets": [
+        {
+          "name": "WebSearchTarget",
+          "targetType": "connector",
+          "connectorId": "web-search",
+          "configurations": [
+            {
+              "name": "WebSearch",
+              "description": "",
+              "parameterValues": {
+                "domainFilter": {
+                  "exclude": [
+                    "example.com",
+                    "example.org"
+                  ]
+                }
+              },
+              "parameterOverrides": []
+            }
+          ]
+        }
+      ],
+      "authorizerType": "NONE",
+      "enableSemanticSearch": false,
+      "exceptionLevel": "NONE"
+    }
+  ],
   "policyEngines": [],
   "configBundles": [],
   "abTests": [],
