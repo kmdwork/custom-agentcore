@@ -19,7 +19,6 @@ from aircon_tools import (
     _read_limited,
 )
 
-
 MAX_OPERATIONS = 20
 MAX_FIELD_CHARS = 500
 MAX_WRITE_REQUEST_BYTES = 64 * 1024

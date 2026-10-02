@@ -1,9 +1,11 @@
 from typing import Any
-from collections import OrderedDict
+# from collections import OrderedDict
 from strands import Agent, tool
-import asyncio
+# import asyncio
 import base64
 import binascii
+from datetime import datetime, timezone
+from strands_tools.browser import AgentCoreBrowser
 from strands.agent.conversation_manager.null_conversation_manager import NullConversationManager
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from model.load import load_model
@@ -25,6 +27,11 @@ mcp_clients = [get_streamable_http_mcp_client()]
 DEFAULT_SYSTEM_PROMPT = """
 You are a helpful assistant. Use tools when appropriate.
 
+You may not be accurately recognizing the current time by default.
+Therefore, when using the `browser` tool to check a webpage, please first use the `get_current_datetime` tool to retrieve the actual current date and time before proceeding.
+Initialize a browser session before using it, and close the session when the task is complete.
+When performing a web search, please use DuckDuckGo (duckduckgo.com) instead of Google. Enter keywords into the search bar to retrieve results, and extract the necessary information from the top-ranking pages.
+
 For requests to create or update Aircon management data (companies, properties,
 systems, models, or units), use the read tools when needed and then call
 apply_aircon_changes with the validated operations. Do not ask the user for a
@@ -32,13 +39,22 @@ conversational confirmation before calling apply_aircon_changes: that tool
 always interrupts and the client presents the actual approval UI. If required
 information is missing or ambiguous, ask a focused follow-up question instead.
 
+If asked about chat conversation history, please check chatHistory.md in the knowledge base.
 """
 
 
 # Define a collection of tools used by the model
-tools = [read_web_page, *AIRCON_TOOLS, *AIRCON_WRITE_TOOLS]
+browser_tool = AgentCoreBrowser(region="ap-northeast-1")
+tools = [read_web_page, *AIRCON_TOOLS, *AIRCON_WRITE_TOOLS, browser_tool.browser]
 
 _INLINE_FUNCTION_NAMES = set()
+
+@tool
+def get_current_datetime() -> str:
+    """Return the current date and time in UTC as ISO 8601."""
+    return datetime.now(timezone.utc).isoformat()
+tools.append(get_current_datetime)
+
 
 # Define a simple function tool
 @tool

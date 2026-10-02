@@ -19,7 +19,7 @@
       "envVars": [
         {
           "name": "AIRCON_API_URL",
-          "value": "<AIRCON_API_URL>"
+          "value": "https://<AIRCON_API_URL>"
         },
         {
           "name": "AIRCON_ALLOW_INSECURE_HTTP",
