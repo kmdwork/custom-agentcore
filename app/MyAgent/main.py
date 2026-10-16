@@ -11,7 +11,8 @@ from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from model.load import load_model
 from mcp_client.client import get_streamable_http_mcp_client
 from memory.session import get_memory_session_manager
-from agentcore_browser import prepare_playwright, read_web_page
+from agentcore_browser import prepare_playwright
+from code_interpreter_service import create_code_interpreter_tools
 from aircon_tools import AIRCON_TOOLS
 from aircon_write_tools import AIRCON_WRITE_TOOLS
 
@@ -40,12 +41,18 @@ always interrupts and the client presents the actual approval UI. If required
 information is missing or ambiguous, ask a focused follow-up question instead.
 
 If asked about chat conversation history, please check chatHistory.md in the knowledge base.
+
+If a user requests the creation of files such as Excel, CSV, PDF, or JSON, please use Code Interpreter and Python to generate the files as needed.
+Save generated files under the relative `artifacts/` directory, for example `artifacts/report.xlsx`.
+Use lowercase ASCII English filenames with letters, numbers, dots, hyphens, or underscores only. Do not use Japanese characters or spaces in filenames.
+After generating a file, call `publish_generated_file` with its relative path and give the returned download URL to the user.
 """
 
 
 # Define a collection of tools used by the model
 browser_tool = AgentCoreBrowser(region="ap-northeast-1")
-tools = [read_web_page, *AIRCON_TOOLS, *AIRCON_WRITE_TOOLS, browser_tool.browser]
+
+tools = [*AIRCON_TOOLS, *AIRCON_WRITE_TOOLS, browser_tool.browser]
 
 _INLINE_FUNCTION_NAMES = set()
 
@@ -78,14 +85,17 @@ def agent_factory():
     cache = {}
     def get_or_create_agent(session_id, user_id):
         _actor_id = user_id
-        key = f"{session_id}/{_actor_id}"
+        key = (session_id, _actor_id)
         if key not in cache:
             cache[key] = Agent(
                 model=load_model(),
                 session_manager=get_memory_session_manager(session_id, _actor_id),
                 conversation_manager=_make_conversation_manager(),
                 system_prompt=DEFAULT_SYSTEM_PROMPT,
-                tools=tools,
+                tools=[
+                    *tools,
+                    *create_code_interpreter_tools(session_id, _actor_id),
+                ],
                 hooks=[
                 ],
             )

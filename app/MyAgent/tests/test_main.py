@@ -87,6 +87,9 @@ class RuntimeInputTests(unittest.TestCase):
         self.assertIn("Do not ask the user", main.DEFAULT_SYSTEM_PROMPT)
         self.assertIn("conversational confirmation", main.DEFAULT_SYSTEM_PROMPT)
 
+    def test_system_prompt_requires_ascii_english_file_names(self):
+        self.assertIn("lowercase ASCII English filenames", main.DEFAULT_SYSTEM_PROMPT)
+
 
 class RuntimeStreamingTests(unittest.IsolatedAsyncioTestCase):
     async def test_invocation_state_is_replaced_for_each_cached_agent_call(self):

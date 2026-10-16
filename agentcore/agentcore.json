@@ -24,6 +24,10 @@
         {
           "name": "AIRCON_ALLOW_INSECURE_HTTP",
           "value": "1"
+        },
+        {
+          "name": "GENERATED_FILES_BUCKET",
+          "value": "<S3_BUCKET_NAME>"
         }
       ],
       "connections": [
@@ -32,7 +36,16 @@
           "to": {
             "type": "browser"
           }
+        },
+        {
+          "id": "managedCodeInterpreter",
+          "to": {
+            "type": "codeInterpreter"
+          }
         }
+      ],
+      "additionalPolicies": [
+        "iam/generated-files-s3.json"
       ]
     }
   ],

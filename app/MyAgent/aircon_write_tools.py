@@ -19,6 +19,34 @@ from aircon_tools import (
     _read_limited,
 )
 
+    # {
+    #     "type": "create_property", 
+    #     "name": "", -> value to update or create
+    #     "company_id": "company-123"
+    # }
+
+    # -- type --
+    # - create_company: 会社の新規作成
+    # - create_property: 物件情報の新規作成
+    # - create_system: 系統の新規作成
+    # - create_model: エアコン情報の新規作成
+    # - create_unit: ユニットの新規作成
+    # - update_company: 会社の更新
+    # - update_property: 物件情報の更新
+    # - update_system: 系統の更新
+    # - update_model: エアコン情報の更新
+    # - update_unit: ユニットの更新
+
+    # -other-
+    # *_id, *_ref
+    # *_id is the ID of a already exists.
+    #.  *_ref is the zero-base index of a compatible earlier create operation.
+
+
+
+
+
+
 MAX_OPERATIONS = 20
 MAX_FIELD_CHARS = 500
 MAX_WRITE_REQUEST_BYTES = 64 * 1024
