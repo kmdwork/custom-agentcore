@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 # import ipaddress
 import logging
 import os
@@ -15,13 +16,68 @@ import stat
 # from uuid import uuid4
 
 # from bedrock_agentcore.tools.browser_client import browser_session
+from bedrock_agentcore.tools.browser_client import BrowserClient as AgentCoreBrowserClient
 # from playwright.sync_api import sync_playwright
 # from strands import tool
+from strands_tools.browser import AgentCoreBrowser as StrandsAgentCoreBrowser
 
 
 # MAX_PAGE_TEXT_CHARS = 20_000
 # NAVIGATION_TIMEOUT_MS = 20_000
 _PLAYWRIGHT_NODE_PATH = Path("/tmp/playwright-driver-node")
+
+
+class AgentCoreBrowser(StrandsAgentCoreBrowser):
+    """AgentCore Browser with lifecycle fixes for synchronous tool execution."""
+
+    def _execute_async(self, action_coro):
+        # Strands runs synchronous tools in a worker thread, where no nested
+        # event loop is needed. Avoid nest_asyncio because it patches asyncio
+        # process-wide and interferes with AgentCore's AnyIO/ASGI event loop.
+        try:
+            previous_loop = asyncio.get_event_loop()
+        except RuntimeError:
+            previous_loop = None
+
+        asyncio.set_event_loop(self._loop)
+        try:
+            return self._loop.run_until_complete(action_coro)
+        finally:
+            asyncio.set_event_loop(previous_loop)
+
+    async def create_browser_session(self):
+        if not self._playwright:
+            raise RuntimeError("Playwright not initialized")
+
+        session_client = AgentCoreBrowserClient(region=self.region)
+        session_id = session_client.start(
+            identifier=self.identifier,
+            session_timeout_seconds=self.session_timeout,
+        )
+        self._client_dict[session_id] = session_client
+
+        try:
+            cdp_url, cdp_headers = session_client.generate_ws_headers()
+            return await self._playwright.chromium.connect_over_cdp(
+                endpoint_url=cdp_url,
+                headers=cdp_headers,
+            )
+        except Exception:
+            self._client_dict.pop(session_id, None)
+            session_client.stop()
+            raise
+
+    def close(self, action):
+        try:
+            return super().close(action)
+        finally:
+            self._started = False
+
+    def close_platform(self) -> None:
+        try:
+            super().close_platform()
+        finally:
+            self._client_dict.clear()
 
 
 def prepare_playwright(log: logging.Logger) -> None:

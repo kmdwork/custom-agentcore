@@ -6,9 +6,18 @@ from strands.tools.mcp.mcp_client import MCPClient
 logger = logging.getLogger(__name__)
 
 # ExaAI provides information about code through web searches, crawling and code context searches through their platform. Requires no authentication
-EXAMPLE_MCP_ENDPOINT = "https://myruntime-strands-app-tools-veux57gzyv.gateway.bedrock-agentcore.ap-northeast-1.amazonaws.com/mcp"
+# EXAMPLE_MCP_ENDPOINT = "https://myruntime-strands-app-tools-veux57gzyv.gateway.bedrock-agentcore.ap-northeast-1.amazonaws.com/mcp"
+
+# def get_streamable_http_mcp_client() -> MCPClient:
+#     """Returns an MCP Client compatible with Strands"""
+#     # to use an MCP server that supports bearer authentication, add headers={"Authorization": f"Bearer {access_token}"}
+#     return MCPClient(lambda: streamablehttp_client(EXAMPLE_MCP_ENDPOINT))
 
 def get_streamable_http_mcp_client() -> MCPClient:
-    """Returns an MCP Client compatible with Strands"""
-    # to use an MCP server that supports bearer authentication, add headers={"Authorization": f"Bearer {access_token}"}
-    return MCPClient(lambda: streamablehttp_client(EXAMPLE_MCP_ENDPOINT))
+    gateway_url = os.environ[
+        "AGENTCORE_GATEWAY_STRANDS_APP_TOOLS_URL"
+    ].rstrip("/")
+
+    return MCPClient(
+        lambda: streamablehttp_client(f"{gateway_url}/mcp")
+    )

@@ -56,7 +56,6 @@ class RuntimeInputTests(unittest.TestCase):
     def test_existing_tools_and_aircon_tools_are_registered(self):
         names = {getattr(value, "tool_name", None) for value in main.tools}
         self.assertTrue({
-            "read_web_page",
             "add_numbers",
             "search_aircon_companies",
             "search_aircon_properties",
@@ -66,6 +65,15 @@ class RuntimeInputTests(unittest.TestCase):
             "apply_aircon_changes",
         }.issubset(names))
         self.assertTrue(any(type(value).__name__ == "MCPClient" for value in main.tools))
+
+    def test_browser_tool_is_not_registered(self):
+        self.assertFalse(any(
+            type(value).__name__ == "AgentCoreBrowser" for value in main.tools
+        ))
+
+    def test_system_prompt_uses_gateway_web_search(self):
+        self.assertIn("Gateway `web-search-tool___WebSearch` tool", main.DEFAULT_SYSTEM_PROMPT)
+        self.assertNotIn("DuckDuckGo", main.DEFAULT_SYSTEM_PROMPT)
 
     def test_image_contract_is_unchanged(self):
         png = b"\x89PNG\r\n\x1a\ncontent"

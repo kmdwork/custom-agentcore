@@ -1,7 +1,7 @@
 {
-  "$schema": "https://schema.agentcore.aws.dev/v1/agentcore.json",
   "name": "myruntime",
-  "version": 1,
+  "version": 2,
+  "migratedFrom": "v1",
   "managedBy": "CDK",
   "tags": {
     "agentcore:created-by": "agentcore-cli",
@@ -14,12 +14,10 @@
       "entrypoint": "main.py",
       "codeLocation": "app/MyAgent/",
       "runtimeVersion": "PYTHON_3_14",
-      "networkMode": "PUBLIC",
-      "protocol": "HTTP",
       "envVars": [
         {
           "name": "AIRCON_API_URL",
-          "value": "https://<AIRCON_API_URL>"
+          "value": "<IP_ENDPOINT_URL>"
         },
         {
           "name": "AIRCON_ALLOW_INSECURE_HTTP",
@@ -29,6 +27,11 @@
           "name": "GENERATED_FILES_BUCKET",
           "value": "<S3_BUCKET_NAME>"
         }
+      ],
+      "networkMode": "PUBLIC",
+      "protocol": "HTTP",
+      "additionalPolicies": [
+        "iam/generated-files-s3.json"
       ],
       "connections": [
         {
@@ -43,9 +46,6 @@
             "type": "codeInterpreter"
           }
         }
-      ],
-      "additionalPolicies": [
-        "iam/generated-files-s3.json"
       ]
     }
   ],
@@ -84,18 +84,7 @@
       ]
     }
   ],
-  "knowledgeBases": [
-    {
-      "type": "AgentCoreKnowledgeBase",
-      "name": "MyKnowledgeBase",
-      "dataSources": [
-        {
-          "type": "S3",
-          "uri": "s3://<S3_BUCKET_NAME>"
-        }
-      ]
-    }
-  ],
+  "knowledgeBases": [],
   "credentials": [],
   "evaluators": [],
   "onlineEvalConfigs": [],
@@ -106,37 +95,15 @@
       "description": "Gateway for strands-app-tools",
       "targets": [
         {
-          "name": "myruntime-MyKnowledgeBase",
+          "name": "web-search-tool",
           "targetType": "connector",
-          "connectorId": "bedrock-knowledge-bases",
+          "connectorId": "web-search",
           "configurations": [
             {
-              "name": "AgenticRetrieveStream",
-              "description": "Streaming endpoint for agentic retrieval from knowledge bases. Performs multi-step retrieval with planning and returns results as a stream of events.",
+              "name": "WebSearch",
               "parameterValues": {
-                "retrievers": [
-                  {
-                    "configuration": {
-                      "knowledgeBase": {
-                        "knowledgeBaseId": "<BEDROCK_KNOWLEDGE_BASE_ID>"
-                      }
-                    }
-                  }
-                ],
-                "agenticRetrieveConfiguration": {
-                  "foundationModelType": "MANAGED",
-                  "rerankingModelType": "MANAGED"
-                }
-              },
-              "parameterOverrides": []
-            },
-            {
-              "name": "Retrieve",
-              "description": "Queries a knowledge base and retrieves information from it.",
-              "parameterValues": {
-                "knowledgeBaseId": "<BEDROCK_KNOWLEDGE_BASE_ID>"
-              },
-              "parameterOverrides": []
+                "maxResults": 10
+              }
             }
           ]
         }
@@ -148,8 +115,6 @@
   ],
   "policyEngines": [],
   "configBundles": [],
-  "abTests": [],
   "harnesses": [],
-  "datasets": [],
   "payments": []
 }
